@@ -22,8 +22,6 @@ def start_import(request):
                 user=request.user,
                 content_type=ContentType.objects.get(id=form.data['model']),
             )
-            if created:
-                pass
             import_log.save()
     else:
         form = ImportForm()
@@ -33,3 +31,6 @@ def start_import(request):
             Q(permission__user=request.user, permission__codename__startswith="change_")).distinct()
     
     return render_to_response('simple_import/import.html', {'form':form,}, RequestContext(request, {}),)
+
+def match_columns(request):
+    pass
