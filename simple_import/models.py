@@ -9,9 +9,33 @@ class ImportSetting(models.Model):
     
 class ColumnMatch(models.Model):
     """ Match column names from the user uploaded file to the database """
-    column_name = models.CharField(max_length=255)
-    field_name = models.CharField(max_length=255)
+    column_name = models.CharField(max_length=200)
+    field_name = models.CharField(max_length=255, blank=True)
     import_setting = models.ForeignKey(ImportSetting)
+    default_value = models.CharField(max_length=2000, blank=True)
+    
+    class Meta:
+        unique_together = ('column_name', 'import_setting')
+    
+    def __unicode__(self):
+        return unicode('{0} {1}'.format(self.column_name, self.field_name))
+    
+    def guess_field(self):
+        """ Guess the match based on field names
+        First look for an exact field name match
+        then search defined alternative names
+        then normalize the field name and check for match
+        """
+        model = self.import_setting.content_type.model_class()
+        field_names = model._meta.get_all_field_names()
+        if self.column_name in field_names:
+            self.field_name = self.column_name
+            return
+        #TODO user defined alt names
+        normalized_field_name = self.column_name.lower().replace(' ', '_')
+        if normalized_field_name in field_names:
+            self.field_name = normalized_field_name
+
     
 class ImportLog(models.Model):
     """ A log of all import attempts """
@@ -21,6 +45,13 @@ class ImportLog(models.Model):
     import_file = models.FileField(upload_to="import_file")
     error_file = models.FileField(upload_to="error_file", blank=True)
     import_setting = models.ForeignKey(ImportSetting, editable=False)
+    import_type_choices = (
+        ("N", "Create New Records"),
+        ("U", "Create and Update Records"),
+        ("O", "Only Update Records"),
+    )
+    import_type = models.CharField(max_length=1, choices=import_type_choices)
+    
     def __unicode__(self):
         return unicode(self.name)
     
@@ -55,5 +86,14 @@ class ImportLog(models.Model):
                     data_row += [cell.internal_value]
                 data += [data_row]
         elif file_ext == "ods":
-            #TODO add support, all ods libraries suck
-            pass
+            from odsreader import ODSReader
+            doc = ODSReader(self.import_file.path)
+            table = doc.SHEETS.items()[0]
+            data += table[1]
+        return data
+    
+    
+class ImportedObject(models.Model):
+    import_log = models.ForeignKey(ImportLog)
+    object_id = models.IntegerField()
+    content_type = models.ForeignKey(ContentType)

@@ -1,0 +1,8 @@
+<h1>Import Results</h1>
+
+Created: {{ create_count }} <br/>
+
+{% if fail_count %}
+    Failed: {{ fail_count }} <br/>
+    <a href="{{ MEDIA_URL }}{{ import_log.error_file }}">Download failed records</a>
+{% endif %}

@@ -19,11 +19,15 @@ class Migration(SchemaMigration):
         # Adding model 'ColumnMatch'
         db.create_table(u'simple_import_columnmatch', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('column_name', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('field_name', self.gf('django.db.models.fields.CharField')(max_length=255)),
+            ('column_name', self.gf('django.db.models.fields.CharField')(max_length=200)),
+            ('field_name', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
             ('import_setting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['simple_import.ImportSetting'])),
+            ('default_value', self.gf('django.db.models.fields.CharField')(max_length=2000, blank=True)),
         ))
         db.send_create_signal(u'simple_import', ['ColumnMatch'])
+
+        # Adding unique constraint on 'ColumnMatch', fields ['column_name', 'import_setting']
+        db.create_unique(u'simple_import_columnmatch', ['column_name', 'import_setting_id'])
 
         # Adding model 'ImportLog'
         db.create_table(u'simple_import_importlog', (
@@ -34,11 +38,15 @@ class Migration(SchemaMigration):
             ('import_file', self.gf('django.db.models.fields.files.FileField')(max_length=100)),
             ('error_file', self.gf('django.db.models.fields.files.FileField')(max_length=100, blank=True)),
             ('import_setting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['simple_import.ImportSetting'])),
+            ('import_type', self.gf('django.db.models.fields.CharField')(max_length=1)),
         ))
         db.send_create_signal(u'simple_import', ['ImportLog'])
 
 
     def backwards(self, orm):
+        # Removing unique constraint on 'ColumnMatch', fields ['column_name', 'import_setting']
+        db.delete_unique(u'simple_import_columnmatch', ['column_name', 'import_setting_id'])
+
         # Deleting model 'ImportSetting'
         db.delete_table(u'simple_import_importsetting')
 
@@ -87,9 +95,10 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
         u'simple_import.columnmatch': {
-            'Meta': {'object_name': 'ColumnMatch'},
-            'column_name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'field_name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'Meta': {'unique_together': "(('column_name', 'import_setting'),)", 'object_name': 'ColumnMatch'},
+            'column_name': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
+            'default_value': ('django.db.models.fields.CharField', [], {'max_length': '2000', 'blank': 'True'}),
+            'field_name': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'import_setting': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['simple_import.ImportSetting']"})
         },
@@ -100,6 +109,7 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'import_file': ('django.db.models.fields.files.FileField', [], {'max_length': '100'}),
             'import_setting': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['simple_import.ImportSetting']"}),
+            'import_type': ('django.db.models.fields.CharField', [], {'max_length': '1'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'simple_import_log'", 'to': u"orm['auth.User']"})
         },

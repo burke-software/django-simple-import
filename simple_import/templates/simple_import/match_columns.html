@@ -1,0 +1,44 @@
+<h1>Match columns</h1>
+<form action="" method="post">{% csrf_token %}
+    {{ formset.management_form }}
+    {% if errors %}
+        <ul>
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    <table>
+        <tr>
+            <th>Column Header</th>
+            <th>Field</th>
+            <th>Sample Data</th>
+            <th>Default Value</th>
+        </tr>
+        {% for form in formset %}
+            <tr>
+                <td>
+                    {% if form.instance.column_name %}
+                        {{ form.id.as_hidden }}
+                        {{ form.instance.column_name }}
+                    {% else %}
+                        {{ form.column_name }}
+                    {% endif %}
+                    {{ form.column_name.as_hidden }} {{ form.column_name.error }}
+                    {{ form.import_setting.as_hidden }} {{ form.import_setting.error }}
+                </td>
+                <td>
+                    {{ form.field_name }} {{ form.field_name.error }}
+                </td>
+                <td>
+                    {{ form.sample }}
+                </td>
+                <td>
+                    {{ form.default_value }} {{ form.default_value.error }}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+    
+    <input type="submit"/>
+</form>
