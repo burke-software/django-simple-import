@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 from django.db import models
+from django.db import transaction
 
 class ImportSetting(models.Model):
     """ Save some settings per user per content type """
@@ -35,6 +37,13 @@ class ColumnMatch(models.Model):
         normalized_field_name = self.column_name.lower().replace(' ', '_')
         if normalized_field_name in field_names:
             self.field_name = normalized_field_name
+        # Try verbose name
+        for field_name in field_names:
+            field = model._meta.get_field_by_name(field_name)[0]
+            if hasattr(field, 'verbose_name'):
+                if field.verbose_name.lower().replace(' ', '_') == normalized_field_name:
+                    self.field_name = field_name
+            
 
     
 class ImportLog(models.Model):
@@ -61,6 +70,14 @@ class ImportLog(models.Model):
         if not filename[-3:] in ('xls', 'ods', 'csv', 'lsx'):
             raise ValidationError('Invalid file type. Must be xls, xlsx, ods, or csv.')
     
+    @transaction.commit_on_success
+    def undo(self):
+        if self.import_type != "N":
+            raise Exception("Cannot undo this type of import!")
+        for obj in self.importedobject_set.all():
+            if obj.content_object:
+                obj.content_object.delete()
+            obj.delete()
     
     def get_import_file_as_list(self):
         file_ext = str(self.import_file).lower()[-3:]
@@ -97,3 +114,4 @@ class ImportedObject(models.Model):
     import_log = models.ForeignKey(ImportLog)
     object_id = models.IntegerField()
     content_type = models.ForeignKey(ContentType)
+    content_object = generic.GenericForeignKey('content_type', 'object_id')

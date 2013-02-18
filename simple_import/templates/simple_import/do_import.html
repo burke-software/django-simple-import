@@ -1,8 +1,28 @@
 <h1>Import Results</h1>
 
+{% if success_undo %}
+    <p>
+        Import was undone. This is now a simulation, you can run the import again.
+    </p>
+{% endif %}
+
 Created: {{ create_count }} <br/>
 
 {% if fail_count %}
     Failed: {{ fail_count }} <br/>
     <a href="{{ MEDIA_URL }}{{ import_log.error_file }}">Download failed records</a>
+{% endif %}
+
+
+{% if commit %}
+    {% if import_log.import_type == "N" %}
+        <p>
+            It's possible to undo Create only reports. <a href="?commit=False&undo=True">Click here to undo.</a>
+            If you imported properties that created other records, we can not guarentee those records will be removed.
+        </p>
+    {% endif %}
+{% else %}
+    <p>
+        This was only a simulation. <a href="?commit=True&undo=False">Click here to run the import.</a>
+    </p>
 {% endif %}

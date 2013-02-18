@@ -1,9 +1,10 @@
 from django import forms
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.db.models import Q
+from django.db import transaction
 from django.db import IntegrityError
 from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect
@@ -11,7 +12,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 import sys
 
-from simple_import.models import ImportLog, ImportSetting, ColumnMatch
+from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject
 from simple_import.forms import ImportForm, MatchForm
 
 def validate_match_columns(import_log, field_names, model_class, header_row):
@@ -32,9 +33,10 @@ def validate_match_columns(import_log, field_names, model_class, header_row):
                     errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
             else:
                 errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
+    
     return errors
 
-@login_required
+@staff_member_required
 def match_columns(request, import_log_id):
     """ View to match import spreadsheet columns with database fields
     """
@@ -60,10 +62,19 @@ def match_columns(request, import_log_id):
                 field_names,
                 model_class,
                 header_row)
+            all_field_names = []
+            for clean_data in formset.cleaned_data:
+                if clean_data['field_name']:
+                    if clean_data['field_name'] in all_field_names:
+                        errors += ["{0} is duplicated.".format(clean_data['field_name'])]
+                    all_field_names += [clean_data['field_name']]
             if not errors:
+                get = ''
+                if 'commit' in request.POST:
+                    get = "?commit=True"
                 return HttpResponseRedirect(reverse(
                     do_import,
-                    kwargs={'import_log_id': import_log.id}))
+                    kwargs={'import_log_id': import_log.id}) + get)
     else:
         match_ids = []
         for cell in header_row:
@@ -112,11 +123,22 @@ def match_columns(request, import_log_id):
         RequestContext(request, {}),)
 
 
-@login_required
+@staff_member_required
 def do_import(request, import_log_id):
     """ Import the data!
     """
     import_log = get_object_or_404(ImportLog, id=import_log_id)
+    if import_log.import_type == "N" and 'undo' in request.GET and request.GET['undo'] == "True":
+        import_log.undo()
+        return HttpResponseRedirect(reverse(
+                    do_import,
+                    kwargs={'import_log_id': import_log.id}) + '?success_undo=True')
+    
+    if 'success_undo' in request.GET and request.GET['success_undo'] == "True":
+        success_undo = True
+    else:
+        success_undo = False
+    
     model_class = import_log.import_setting.content_type.model_class()
     import_data = import_log.get_import_file_as_list()
     header_row = import_data.pop(0)
@@ -124,26 +146,40 @@ def do_import(request, import_log_id):
     error_data = [header_row + ['Error Type', 'Error Details']]
     create_count = 0
     fail_count = 0
+    if 'commit' in request.GET and request.GET['commit'] == "True":
+        commit = True
+    else:
+        commit = False
     
     for cell in header_row:
         match = import_log.import_setting.columnmatch_set.get(column_name=cell)
         header_row_field_names += [match.field_name]
     
-    for row in import_data:
-        try:
-            new_object = model_class()
-            for i, cell in enumerate(row):
-                setattr(new_object, header_row_field_names[i], cell)
-            new_object.save()
-            create_count += 1
-        except IntegrityError:
-            exc = sys.exc_info()
-            error_data += [row + ["Integrity Error", unicode(exc[1][1])]]
-            fail_count += 1
-        except:
-            exc = sys.exc_info()
-            error_data += [row + ["Unknown Error", unicode(exc[1])]]
-            fail_count += 1
+    with transaction.commit_manually():
+        for row in import_data:
+            try:
+                new_object = model_class()
+                for i, cell in enumerate(row):
+                    setattr(new_object, header_row_field_names[i], cell)
+                new_object.save()
+                create_count += 1
+                ImportedObject.objects.create(
+                    import_log = import_log,
+                    object_id = new_object.pk,
+                    content_type = import_log.import_setting.content_type)
+            except IntegrityError:
+                exc = sys.exc_info()
+                error_data += [row + ["Integrity Error", unicode(exc[1][1])]]
+                fail_count += 1
+            except:
+                exc = sys.exc_info()
+                error_data += [row + ["Unknown Error", unicode(exc[1])]]
+                fail_count += 1
+        if commit:
+            transaction.commit()
+        else:
+            transaction.rollback()
+    
             
     if fail_count:
         import cStringIO as StringIO
@@ -157,7 +193,6 @@ def do_import(request, import_log_id):
         ws = wb.worksheets[0]
         ws.title = "Errors"
         filename = 'Errors.xlsx'
-        print error_data
         for row in error_data:
             ws.append(row)
         buf = StringIO.StringIO()
@@ -171,11 +206,13 @@ def do_import(request, import_log_id):
             'error_data': error_data,
             'create_count': create_count,
             'fail_count': fail_count,
-            'import_log': import_log},
+            'import_log': import_log,
+            'commit': commit,
+            'success_undo': success_undo,},
         RequestContext(request, {}),)
 
 
-@login_required
+@staff_member_required
 def start_import(request):
     """ View to create a new import record
     """
