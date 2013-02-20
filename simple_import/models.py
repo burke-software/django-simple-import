@@ -60,6 +60,7 @@ class ImportLog(models.Model):
         ("O", "Only Update Records"),
     )
     import_type = models.CharField(max_length=1, choices=import_type_choices)
+    update_key = models.CharField(max_length=200, blank=True)
     
     def __unicode__(self):
         return unicode(self.name)

@@ -14,6 +14,9 @@
             <th>Field</th>
             <th>Sample Data</th>
             <th>Default Value</th>
+            {% if import_log.import_type == "U" or import_log.import_type == "O" %}
+                <th>Update Key</th>
+            {% endif %}
         </tr>
         {% for form in formset %}
             <tr>
@@ -36,6 +39,17 @@
                 <td>
                     {{ form.default_value }} {{ form.default_value.error }}
                 </td>
+                {% if import_log.import_type == "U" or import_log.import_type == "O" %}
+                    <td>
+                        <input name="update_key"
+                               value="{% if form.instance.column_name %}{{ form.instance.column_name }}{% else %}{{ form.column_name }}{% endif %}"
+                               type="radio"
+                               {% if import_log.update_key == form.instance.column_name %}
+                                   checked="checked"
+                                {% endif %}
+                               />
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
     </table>

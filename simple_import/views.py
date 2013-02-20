@@ -57,6 +57,20 @@ def match_columns(request, import_log_id):
         formset = MatchFormSet(request.POST)
         if formset.is_valid():
             formset.save()
+            if import_log.import_type in ["U", "O"]:
+                if 'update_key' in request.POST and request.POST['update_key']:
+                    field_name = import_log.import_setting.columnmatch_set.get(column_name=request.POST['update_key']).field_name
+                    if field_name:
+                        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+                        if direct and field_object.unique:
+                            import_log.update_key = request.POST['update_key']
+                            import_log.save()
+                        else:
+                            errors += ['Update key must be unique. Please select a unique field.']
+                    else:
+                        errors += ['Update key must matched with a column.']
+                else:
+                    errors += ['Please select an update key. This key is used to linked records for updating.']
             errors += validate_match_columns(
                 import_log,
                 field_names,
@@ -119,7 +133,7 @@ def match_columns(request, import_log_id):
     
     return render_to_response(
         'simple_import/match_columns.html',
-        {'formset':formset, 'errors': errors},
+        {'import_log': import_log, 'formset':formset, 'errors': errors},
         RequestContext(request, {}),)
 
 
@@ -143,6 +157,7 @@ def do_import(request, import_log_id):
     import_data = import_log.get_import_file_as_list()
     header_row = import_data.pop(0)
     header_row_field_names = []
+    header_row_default = []
     error_data = [header_row + ['Error Type', 'Error Details']]
     create_count = 0
     fail_count = 0
@@ -154,13 +169,17 @@ def do_import(request, import_log_id):
     for cell in header_row:
         match = import_log.import_setting.columnmatch_set.get(column_name=cell)
         header_row_field_names += [match.field_name]
+        header_row_default += [match.default_value]
     
     with transaction.commit_manually():
         for row in import_data:
             try:
                 new_object = model_class()
                 for i, cell in enumerate(row):
-                    setattr(new_object, header_row_field_names[i], cell)
+                    if cell:
+                        setattr(new_object, header_row_field_names[i], cell)
+                    elif header_row_default[i]:
+                        setattr(new_object, header_row_field_names[i], header_row_default[i])
                 new_object.save()
                 create_count += 1
                 ImportedObject.objects.create(
@@ -186,8 +205,6 @@ def do_import(request, import_log_id):
         from django.core.files.base import ContentFile
         from openpyxl.workbook import Workbook
         from openpyxl.writer.excel import save_virtual_workbook
-        from openpyxl.cell import get_column_letter
-        import re
         
         wb = Workbook()
         ws = wb.worksheets[0]
