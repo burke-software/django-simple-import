@@ -5,6 +5,7 @@ An import tool easy enough your users could use it. django-simple-import aims to
 and user preferences in the database. 
 
 1.0 has been released to pypi
+
 Project is minimally functional. Please evaluate before using in Production. Expect more features soon.
 
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
@@ -38,7 +39,7 @@ In the screenshots I gave them a django-grappelli theme. The base templates have
 See example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import)
 
 ### Security
-I'm working on the assumtion you staff users are trusted. Only users with change permission 
+I'm working on the assumtion staff users are trusted. Only users with change permission 
 to a field will see it as an option. But I have not spent much time looking for ways users could
 manipulate urls to run unauthorized imports. Feel free to contribute if this is a need you have.
 All import views do require admin "is staff" permission.
