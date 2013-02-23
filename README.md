@@ -6,21 +6,31 @@ and user preferences in the database.
 
 Project is not yet stable, do not use in production.
 
+![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
+![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
+![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/do_import.png)
+
 ## Features
 - Supports csv, xls, xlsx, and ods import file
 - Save user matches of column headers to fields
-- Guess matches and allow programmers to give alternative names (partially implimented)
-- Create, Update, or do both imports (partially implimented)
-- Allow programmers to define special import properties for custom handling (not implimented)
-- Set related objects by any unique field (not implimented)
+- Guess matches
+- Create, Update, or do both imports
+- Allow programmers to define special import properties for custom handling (not implemented)
+- Set related objects by any unique field (not implemented)
 - Simulate imports before commiting to database
 - Undo (create only) imports
-- Security checks if user has correct permissions (partially implimented)
+- Security checks if user has correct permissions (partially implemented)
 
 ## Install
 
+1. Add 'simple_import' to INSTALLED APPS
+1. Add simple_import to urls.py like
+urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
+1. syncdb (you may use south)
+
 ## Usage
 
+Go to /simple_import/start_import/ or use the admin interface
 
 ### Security
 I'm working on the assumtion you staff users are trusted. Only users with change permission 
