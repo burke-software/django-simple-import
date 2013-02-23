@@ -32,6 +32,9 @@ urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
 
 Go to /simple_import/start_import/ or use the admin interface
 
+In the screenshots I gave them a django-grappelli theme. The base templates have no style and are very basic. 
+See example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import)
+
 ### Security
 I'm working on the assumtion you staff users are trusted. Only users with change permission 
 to a field will see it as an option. But I have not spent much time looking for ways users could
