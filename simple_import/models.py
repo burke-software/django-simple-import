@@ -50,7 +50,7 @@ class ImportLog(models.Model):
     """ A log of all import attempts """
     name = models.CharField(max_length=255)
     user = models.ForeignKey(User, editable=False, related_name="simple_import_log")
-    date = models.DateTimeField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True, verbose_name="Date Created")
     import_file = models.FileField(upload_to="import_file")
     error_file = models.FileField(upload_to="error_file", blank=True)
     import_setting = models.ForeignKey(ImportSetting, editable=False)
