@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db import transaction
 from django.db import IntegrityError
+from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
@@ -160,28 +161,50 @@ def do_import(request, import_log_id):
     header_row_default = []
     error_data = [header_row + ['Error Type', 'Error Details']]
     create_count = 0
+    update_count = 0
     fail_count = 0
     if 'commit' in request.GET and request.GET['commit'] == "True":
         commit = True
     else:
         commit = False
     
-    for cell in header_row:
+    key_column_name = None
+    if import_log.update_key and import_log.import_type in ["U", "O"]:
+        key_column_name = import_log.import_setting.columnmatch_set.get(field_name=import_log.update_key).column_name
+    for i, cell in enumerate(header_row):
         match = import_log.import_setting.columnmatch_set.get(column_name=cell)
         header_row_field_names += [match.field_name]
         header_row_default += [match.default_value]
+        if key_column_name == cell:
+            key_index = i
     
     with transaction.commit_manually():
         for row in import_data:
             try:
-                new_object = model_class()
+                is_created = True
+                if import_log.import_type == "N":
+                    new_object = model_class()
+                elif import_log.import_type == "O":
+                    filters = {import_log.update_key: row[key_index]}
+                    new_object = model_class.objects.get(**filters)
+                    is_created = False
+                elif import_log.import_type == "U":
+                    filters = {import_log.update_key: row[key_index]}
+                    try:
+                        new_object = model_class.objects.get(**filters)
+                        is_created = False
+                    except model_class.DoesNotExist:
+                        new_object = model_class()
                 for i, cell in enumerate(row):
                     if cell:
                         setattr(new_object, header_row_field_names[i], cell)
                     elif header_row_default[i]:
                         setattr(new_object, header_row_field_names[i], header_row_default[i])
                 new_object.save()
-                create_count += 1
+                if is_created:
+                    create_count += 1
+                else:
+                    update_count += 1
                 ImportedObject.objects.create(
                     import_log = import_log,
                     object_id = new_object.pk,
@@ -189,6 +212,10 @@ def do_import(request, import_log_id):
             except IntegrityError:
                 exc = sys.exc_info()
                 error_data += [row + ["Integrity Error", unicode(exc[1][1])]]
+                fail_count += 1
+            except ObjectDoesNotExist:
+                exc = sys.exc_info()
+                error_data += [row + ["No Record Found to Update", unicode(exc[1])]]
                 fail_count += 1
             except:
                 exc = sys.exc_info()
@@ -222,6 +249,7 @@ def do_import(request, import_log_id):
         {
             'error_data': error_data,
             'create_count': create_count,
+            'update_count': update_count,
             'fail_count': fail_count,
             'import_log': import_log,
             'commit': commit,

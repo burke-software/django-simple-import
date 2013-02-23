@@ -6,7 +6,12 @@
     </p>
 {% endif %}
 
-Created: {{ create_count }} <br/>
+{% if create_count %}
+    Created: {{ create_count }} <br/>
+{% endif %}
+{% if update_count %}
+    Updated: {{ update_count }} <br/>
+{% endif %}
 
 {% if fail_count %}
     Failed: {{ fail_count }} <br/>
