@@ -4,7 +4,8 @@ django-simple-import
 An import tool easy enough your users could use it. django-simple-import aims to keep track of logs 
 and user preferences in the database. 
 
-Project is not yet stable, do not use in production.
+1.0 has been released to pypi
+Project is minimally functional. Please evaluate before using in Production. Expect more features soon.
 
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
@@ -23,6 +24,7 @@ Project is not yet stable, do not use in production.
 
 ## Install
 
+1. pip install django-simple-import
 1. Add 'simple_import' to INSTALLED APPS
 1. Add simple_import to urls.py like
 urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
