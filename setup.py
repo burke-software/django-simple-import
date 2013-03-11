@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "django-simple-import",
-    version = "1.0",
+    version = "1.0.1",
     author = "David Burke",
     author_email = "david@burkesoftware.com",
     description = ("An Django import tool easy enough your users could use it"),

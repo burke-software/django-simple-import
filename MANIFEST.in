@@ -1,0 +1,2 @@
+recursive-include simple_import/templates *
+recursive-include simple_import/static *
