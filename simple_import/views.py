@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
-from django.db.models import Q
+from django.db.models import Q, ForeignKey
 from django.db import transaction
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
@@ -139,7 +139,7 @@ def match_relations(request, import_log_id):
     choice_set = []
     for match in matches:
         field, model, direct, m2m = model_class._meta.get_field_by_name(match.field_name)
-        if m2m or not direct:
+        if m2m or isinstance(field, ForeignKey): 
             RelationalMatch.objects.get_or_create(
                 import_log=import_log,
                 field_name=match.field_name)
@@ -178,15 +178,18 @@ def match_relations(request, import_log_id):
         {'formset': formset},
         RequestContext(request, {}),)
 
-def set_field_from_cell(new_object, header_row_field_name, cell):
+def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Set a field from a import cell. Use referenced fields the field
     is m2m or a foreign key.
     """
     field, model, direct, m2m =  new_object._meta.get_field_by_name(header_row_field_name)
     if m2m:
         new_object.simple_import_m2ms[header_row_field_name] = cell
-    elif not direct:
-        pass
+    elif isinstance(field, ForeignKey):
+        related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=field.name).related_field_name
+        related_model = field.related.parent_model
+        related_object = related_model.objects.get(**{related_field_name:cell})
+        setattr(new_object, header_row_field_name, related_object)
     else:
         setattr(new_object, header_row_field_name, cell)
 
@@ -222,7 +225,9 @@ def do_import(request, import_log_id):
     
     key_column_name = None
     if import_log.update_key and import_log.import_type in ["U", "O"]:
-        key_column_name = import_log.import_setting.columnmatch_set.get(field_name=import_log.update_key).column_name
+        key_match = import_log.import_setting.columnmatch_set.get(column_name=import_log.update_key)
+        key_column_name = key_match.column_name
+        key_field_name = key_match.field_name
     for i, cell in enumerate(header_row):
         match = import_log.import_setting.columnmatch_set.get(column_name=cell)
         header_row_field_names += [match.field_name]
@@ -237,11 +242,11 @@ def do_import(request, import_log_id):
                 if import_log.import_type == "N":
                     new_object = model_class()
                 elif import_log.import_type == "O":
-                    filters = {import_log.update_key: row[key_index]}
+                    filters = {key_field_name: row[key_index]}
                     new_object = model_class.objects.get(**filters)
                     is_created = False
                 elif import_log.import_type == "U":
-                    filters = {import_log.update_key: row[key_index]}
+                    filters = {key_field_name: row[key_index]}
                     try:
                         new_object = model_class.objects.get(**filters)
                         is_created = False
@@ -250,9 +255,9 @@ def do_import(request, import_log_id):
                 new_object.simple_import_m2ms = {} # Need to deal with these after saving
                 for i, cell in enumerate(row):
                     if cell:
-                        set_field_from_cell(new_object, header_row_field_names[i], cell)
+                        set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
                     elif header_row_default[i]:
-                        set_field_from_cell(new_object, header_row_field_names[i], header_row_default[i])
+                        set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
                 new_object.save()
                 
                 for key in new_object.simple_import_m2ms.keys():
@@ -262,7 +267,6 @@ def do_import(request, import_log_id):
                     related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=key).related_field_name
                     m2m_object = m2m_model.objects.get(**{related_field_name:value})
                     m2m.add(m2m_object)
-                    
                 
                 if is_created:
                     create_count += 1
