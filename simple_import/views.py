@@ -13,8 +13,8 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 import sys
 
-from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject
-from simple_import.forms import ImportForm, MatchForm
+from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
+from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
 def validate_match_columns(import_log, field_names, model_class, header_row):
     """ Perform some basic pre import validation to make sure it's
@@ -84,30 +84,11 @@ def match_columns(request, import_log_id):
                         errors += ["{0} is duplicated.".format(clean_data['field_name'])]
                     all_field_names += [clean_data['field_name']]
             if not errors:
-                get = ''
-                if 'commit' in request.POST:
-                    get = "?commit=True"
                 return HttpResponseRedirect(reverse(
-                    do_import,
-                    kwargs={'import_log_id': import_log.id}) + get)
+                    match_relations,
+                    kwargs={'import_log_id': import_log.id}))
     else:
-        match_ids = []
-        for cell in header_row:
-            try:
-                match = ColumnMatch.objects.get(
-                    import_setting = import_log.import_setting,
-                    column_name = cell,
-                )
-            except ColumnMatch.DoesNotExist:
-                match = ColumnMatch(
-                    import_setting = import_log.import_setting,
-                    column_name = cell,
-                )
-                match.guess_field()
-                match.save()
-            match_ids += [match.id]
-        
-        existing_matches = ColumnMatch.objects.filter(id__in=match_ids)
+        existing_matches = import_log.get_matches()
         formset = MatchFormSet(queryset=existing_matches)
         
     field_choices = (('', 'Do Not Use'),)
@@ -137,6 +118,77 @@ def match_columns(request, import_log_id):
         {'import_log': import_log, 'formset':formset, 'errors': errors},
         RequestContext(request, {}),)
 
+
+def get_direct_fields_from_model(model_class):
+    direct_fields = []
+    all_fields_names = model_class._meta.get_all_field_names()
+    for field_name in all_fields_names:
+        field = model_class._meta.get_field_by_name(field_name)
+        # Direct, not m2m, not FK
+        if field[2] and not field[3] and field[0].__class__.__name__ != "ForeignKey":
+            direct_fields += [field[0]]
+    return direct_fields
+
+
+@staff_member_required
+def match_relations(request, import_log_id):
+    import_log = get_object_or_404(ImportLog, id=import_log_id)
+    model_class = import_log.import_setting.content_type.model_class()
+    matches = import_log.get_matches()
+    field_names = []
+    choice_set = []
+    for match in matches:
+        field, model, direct, m2m = model_class._meta.get_field_by_name(match.field_name)
+        if m2m or not direct:
+            RelationalMatch.objects.get_or_create(
+                import_log=import_log,
+                field_name=match.field_name)
+            field_names += [match.field_name]
+            choices = (('', '---------'),)
+            for field in get_direct_fields_from_model(field.related.parent_model()):
+                if field.unique:
+                    choices += ((field.name, field.verbose_name),)
+            choice_set += [choices]
+    
+    existing_matches = RelationalMatch.objects.filter(
+        import_log=import_log,
+        field_name__in=field_names)
+    MatchRelationFormSet = modelformset_factory(
+        RelationalMatch,
+        form=MatchRelationForm, extra=0)
+    if request.POST:
+        formset = MatchRelationFormSet(request.POST)
+        if formset.is_valid():
+            formset.save()
+            get = ''
+            if 'commit' in request.POST:
+                get = "?commit=True"
+            return HttpResponseRedirect(reverse(
+                do_import,
+                kwargs={'import_log_id': import_log.id}) + get)
+    else:
+        formset = MatchRelationFormSet(queryset=existing_matches)
+    
+    for i, form in enumerate(formset.forms):
+        choices = choice_set[i]
+        form.fields['related_field_name'].widget = forms.Select(choices=choices)
+        
+    return render_to_response(
+        'simple_import/match_relations.html',
+        {'formset': formset},
+        RequestContext(request, {}),)
+
+def set_field_from_cell(new_object, header_row_field_name, cell):
+    """ Set a field from a import cell. Use referenced fields the field
+    is m2m or a foreign key.
+    """
+    field, model, direct, m2m =  new_object._meta.get_field_by_name(header_row_field_name)
+    if m2m:
+        new_object.simple_import_m2ms[header_row_field_name] = cell
+    elif not direct:
+        pass
+    else:
+        setattr(new_object, header_row_field_name, cell)
 
 @staff_member_required
 def do_import(request, import_log_id):
@@ -195,12 +247,23 @@ def do_import(request, import_log_id):
                         is_created = False
                     except model_class.DoesNotExist:
                         new_object = model_class()
+                new_object.simple_import_m2ms = {} # Need to deal with these after saving
                 for i, cell in enumerate(row):
                     if cell:
-                        setattr(new_object, header_row_field_names[i], cell)
+                        set_field_from_cell(new_object, header_row_field_names[i], cell)
                     elif header_row_default[i]:
-                        setattr(new_object, header_row_field_names[i], header_row_default[i])
+                        set_field_from_cell(new_object, header_row_field_names[i], header_row_default[i])
                 new_object.save()
+                
+                for key in new_object.simple_import_m2ms.keys():
+                    value = new_object.simple_import_m2ms[key]
+                    m2m = getattr(new_object, key)
+                    m2m_model = type(m2m.model())
+                    related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=key).related_field_name
+                    m2m_object = m2m_model.objects.get(**{related_field_name:value})
+                    m2m.add(m2m_object)
+                    
+                
                 if is_created:
                     create_count += 1
                 else:

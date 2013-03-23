@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.db import models
+from django.conf import settings
 from django.db import transaction
 
 class ImportSetting(models.Model):
@@ -80,20 +81,47 @@ class ImportLog(models.Model):
                 obj.content_object.delete()
             obj.delete()
     
-    def get_import_file_as_list(self):
+    def get_matches(self):
+        """ Get each matching header row to database match
+        Returns a ColumnMatch queryset"""
+        header_row = self.get_import_file_as_list(only_header=True)
+        match_ids = []
+        for cell in header_row:
+            try:
+                match = ColumnMatch.objects.get(
+                    import_setting = self.import_setting,
+                    column_name = cell,
+                )
+            except ColumnMatch.DoesNotExist:
+                match = ColumnMatch(
+                    import_setting = self.import_setting,
+                    column_name = cell,
+                )
+                match.guess_field()
+                match.save()
+            match_ids += [match.id]
+        
+        return ColumnMatch.objects.filter(id__in=match_ids)
+
+    def get_import_file_as_list(self, only_header=False):
         file_ext = str(self.import_file).lower()[-3:]
         data = []
         if file_ext == "xls":
             import xlrd
-            wb = xlrd.open_workbook(file_contents=self.import_file.read())
+            import os
+            wb = xlrd.open_workbook(os.path.join(settings.MEDIA_ROOT, self.import_file.file.name))
             sh1 = wb.sheet_by_index(0)
             for rownum in range(sh1.nrows): 
                 data += [sh1.row_values(rownum)]
+                if only_header:
+                    break
         elif file_ext == "csv":
             import csv
             reader = csv.reader(open(self.import_file.path, "rb"))
             for row in reader:
                 data += [row]
+                if only_header:
+                    break
         elif file_ext == "lsx":
             from openpyxl.reader.excel import load_workbook
             wb = load_workbook(filename=self.import_file.path, use_iterators = True)
@@ -103,13 +131,31 @@ class ImportLog(models.Model):
                 for cell in row:
                     data_row += [cell.internal_value]
                 data += [data_row]
+                if only_header:
+                    break
         elif file_ext == "ods":
             from odsreader import ODSReader
             doc = ODSReader(self.import_file.path)
             table = doc.SHEETS.items()[0]
             data += table[1]
+        if only_header:
+            return data[0]
         return data
-    
+
+
+class RelationalMatch(models.Model):
+    """Store which unique field is being use to match.
+    This can be used only to set a FK or one M2M relation
+    on the import root model. It does not add them.
+    With Multple rows set to the same field, you could set more
+    than one per row.
+    EX Lets say a student has an ID and username and both
+    are marked as unique in Django orm. The user could reference
+    that student by either."""
+    import_log = models.ForeignKey(ImportLog)
+    field_name = models.CharField(max_length=255) # Ex student_number_set
+    related_field_name = models.CharField(max_length=255, blank=True) # Ex username
+
     
 class ImportedObject(models.Model):
     import_log = models.ForeignKey(ImportLog)
