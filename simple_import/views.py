@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
@@ -269,8 +270,22 @@ def do_import(request, import_log_id):
                     m2m.add(m2m_object)
                 
                 if is_created:
+                    LogEntry.objects.log_action(
+                        user_id         = request.user.pk, 
+                        content_type_id = ContentType.objects.get_for_model(new_object).pk,
+                        object_id       = new_object.pk,
+                        object_repr     = unicode(new_object), 
+                        action_flag     = ADDITION
+                    )
                     create_count += 1
                 else:
+                    LogEntry.objects.log_action(
+                        user_id         = request.user.pk, 
+                        content_type_id = ContentType.objects.get_for_model(new_object).pk,
+                        object_id       = new_object.pk,
+                        object_repr     = unicode(new_object), 
+                        action_flag     = CHANGE
+                    )
                     update_count += 1
                 ImportedObject.objects.create(
                     import_log = import_log,
