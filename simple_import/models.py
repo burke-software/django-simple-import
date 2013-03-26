@@ -37,7 +37,7 @@ class ColumnMatch(models.Model):
         #TODO user defined alt names
         normalized_field_name = self.column_name.lower().replace(' ', '_')
         if normalized_field_name in field_names:
-            self.field_name = normalized_field_name
+            self.field_name = self.column_name
         # Try verbose name
         for field_name in field_names:
             field = model._meta.get_field_by_name(field_name)[0]

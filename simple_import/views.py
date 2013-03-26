@@ -26,9 +26,7 @@ def validate_match_columns(import_log, field_names, model_class, header_row):
     column_matches = import_log.import_setting.columnmatch_set.all()
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-        if (direct and
-            model and
-            not field_object.blank):
+        if direct and not field_object.blank:
             field_matches = column_matches.filter(field_name=field_name)
             if field_matches:
                 if field_matches[0].column_name not in header_row:
@@ -95,20 +93,24 @@ def match_columns(request, import_log_id):
     field_choices = (('', 'Do Not Use'),)
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        add = True
         
         if direct:
             field_verbose = field_object.verbose_name
         else:
             field_verbose = field_name
         
-        if direct and model and not field_object.blank:
+        if direct and  not field_object.blank:
             field_verbose += " (Required)"
         if direct and field_object.unique:
             field_verbose += " (Unique)"
         if m2m or isinstance(field_object, ForeignKey):
             field_verbose += " (Related)"
+        elif not direct:
+            add = False
         
-        field_choices += ((field_name, field_verbose),)
+        if add:
+            field_choices += ((field_name, field_verbose),)
     
     i = 0
     for form in formset:
@@ -140,7 +142,7 @@ def match_relations(request, import_log_id):
     matches = import_log.get_matches()
     field_names = []
     choice_set = []
-    for match in matches:
+    for match in matches.exclude(field_name=""):
         field, model, direct, m2m = model_class._meta.get_field_by_name(match.field_name)
         if m2m or isinstance(field, ForeignKey): 
             RelationalMatch.objects.get_or_create(
