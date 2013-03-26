@@ -137,7 +137,10 @@ class ImportLog(models.Model):
             from odsreader import ODSReader
             doc = ODSReader(self.import_file.path)
             table = doc.SHEETS.items()[0]
-            data += table[1]
+            if only_header:
+                data += [table[1][0]]
+            else:
+                data += table[1]
         if only_header:
             return data[0]
         return data
