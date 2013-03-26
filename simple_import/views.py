@@ -105,11 +105,12 @@ def match_columns(request, import_log_id):
             field_verbose += " (Required)"
         if direct and field_object.unique:
             field_verbose += " (Unique)"
+        if m2m or isinstance(field_object, ForeignKey):
+            field_verbose += " (Related)"
         
         field_choices += ((field_name, field_verbose),)
     
     i = 0
-    print sample_row
     for form in formset:
         form.fields['field_name'].widget = forms.Select(choices=(field_choices))
         form.sample = sample_row[i]
