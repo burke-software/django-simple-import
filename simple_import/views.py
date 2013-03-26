@@ -31,7 +31,7 @@ def validate_match_columns(import_log, field_names, model_class, header_row):
             if field_matches:
                 if field_matches[0].column_name not in header_row:
                     errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
-            else:
+            elif field_name[-4:] != "_ptr":
                 errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
     
     return errors
@@ -219,6 +219,7 @@ def do_import(request, import_log_id):
     header_row = import_data.pop(0)
     header_row_field_names = []
     header_row_default = []
+    header_row_null_on_empty = []
     error_data = [header_row + ['Error Type', 'Error Details']]
     create_count = 0
     update_count = 0
@@ -237,6 +238,7 @@ def do_import(request, import_log_id):
         match = import_log.import_setting.columnmatch_set.get(column_name=cell)
         header_row_field_names += [match.field_name]
         header_row_default += [match.default_value]
+        header_row_null_on_empty += [match.null_on_empty]
         if key_column_name == cell:
             key_index = i
     
@@ -259,7 +261,7 @@ def do_import(request, import_log_id):
                         new_object = model_class()
                 new_object.simple_import_m2ms = {} # Need to deal with these after saving
                 for i, cell in enumerate(row):
-                    if cell:
+                    if cell or header_row_null_on_empty[i]:
                         set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
                     elif header_row_default[i]:
                         set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])

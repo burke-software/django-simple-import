@@ -16,6 +16,7 @@ class ColumnMatch(models.Model):
     field_name = models.CharField(max_length=255, blank=True)
     import_setting = models.ForeignKey(ImportSetting)
     default_value = models.CharField(max_length=2000, blank=True)
+    null_on_empty = models.BooleanField(help_text="If cell is blank, clear out the field setting it to blank.")
     
     class Meta:
         unique_together = ('column_name', 'import_setting')

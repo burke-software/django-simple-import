@@ -17,6 +17,7 @@
             {% if import_log.import_type == "U" or import_log.import_type == "O" %}
                 <th>Update Key</th>
             {% endif %}
+            <th>Clear field on blank cell</th>
         </tr>
         {% for form in formset %}
             <tr>
@@ -50,6 +51,7 @@
                                />
                     </td>
                 {% endif %}
+                <td>{{ form.null_on_empty }}</td>
             </tr>
         {% endfor %}
     </table>
