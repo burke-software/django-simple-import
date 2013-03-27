@@ -31,11 +31,12 @@ Project is minimally functional. Please evaluate before using in Production. Exp
 urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
 1. syncdb (you may use south)
 1. (Optional) define allowed methods to be "imported". Example:
-class Foo(models.Model):
-    ...
-    def set_bar(self, value):
-        self.bar = value
-    simple_import_methods = ('set_bar',)
+
+    class Foo(models.Model):
+        ...
+        def set_bar(self, value):
+            self.bar = value
+        simple_import_methods = ('set_bar',)
    
 
 ## Usage
