@@ -219,7 +219,6 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Set a field from a import cell. Use referenced fields the field
     is m2m or a foreign key.
     """
-    print header_row_field_name
     if (not header_row_field_name.startswith('simple_import_custom__') and
             not header_row_field_name.startswith('simple_import_method__')):
         field, model, direct, m2m =  new_object._meta.get_field_by_name(header_row_field_name)
