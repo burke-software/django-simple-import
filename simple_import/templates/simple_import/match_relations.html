@@ -1,4 +1,4 @@
-<h1>Match Relations</h1>
+<h1>Match Relations and Prepare to Run Import</h1>
 <form action="" method="post">{% csrf_token %}
     {{ formset.management_form }}
     {% if errors %}
@@ -8,31 +8,33 @@
             {% endfor %}
         </ul>
     {% endif %}
-    <p>
-        Next you need to match how you reference related fields.
-        As an example let's say you are importing Students. Students can be refered to as their ID (ex 453) or Username (ex jstudent).
-        We need to specify how to reference the student. You may select any unique field.
-    </p>
-    <table>
-        <tr>
-            <th>{{ root_model }} Field</th>
-            <th>Unique Mapping</th>
-        </tr>
-        {% for form in formset %}
+    {% if existing_matches %}
+        <p>
+            Next you need to match how you reference related fields.
+            As an example let's say you are importing Students. Students can be refered to as their ID (ex 453) or Username (ex jstudent).
+            We need to specify how to reference the student. You may select any unique field.
+        </p>
+        <table>
             <tr>
-                <td>
-                    {{ form.id.as_hidden }}
-                    {{ form.import_log.as_hidden }}
-                    {{ form.field_name.as_hidden }}
-                    {{ form.instance.field_name }}
-                </td>
-                <td>
-                    {{ form.related_field_name }}
-                </td>
+                <th>{{ root_model }} Field</th>
+                <th>Unique Mapping</th>
             </tr>
-        {% endfor %}
-    </table>
-
+            {% for form in formset %}
+                <tr>
+                    <td>
+                        {{ form.id.as_hidden }}
+                        {{ form.import_log.as_hidden }}
+                        {{ form.field_name.as_hidden }}
+                        {{ form.instance.field_name }}
+                    </td>
+                    <td>
+                        {{ form.related_field_name }}
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+    
     <input type="submit" name="commit" value="Run actual import">
     <input type="submit" name="simulate" value="Simulate import">
 

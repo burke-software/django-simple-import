@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.admin.views.decorators import staff_member_required
+from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.db.models import Q, ForeignKey
@@ -25,17 +26,33 @@ def validate_match_columns(import_log, field_names, model_class, header_row):
     errors = []
     column_matches = import_log.import_setting.columnmatch_set.all()
     for field_name in field_names:
-        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-        if direct and not field_object.blank:
-            field_matches = column_matches.filter(field_name=field_name)
-            if field_matches:
-                if field_matches[0].column_name not in header_row:
-                    errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
-            elif field_name[-4:] != "_ptr":
-                errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
+        if (not field_name.startswith('simple_import_custom__') and
+            not field_name.startswith('simple_import_method__')):
+            field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+            if direct and not field_object.blank:
+                field_matches = column_matches.filter(field_name=field_name)
+                if field_matches:
+                    if field_matches[0].column_name not in header_row:
+                        errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
+                elif field_name[-4:] != "_ptr":
+                    errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
     
     return errors
 
+
+def get_custom_fields_from_model(model_class):
+    """ django-custom-fields support
+    """
+    if 'custom_field' in settings.INSTALLED_APPS:
+        from custom_field.models import CustomField
+        try:
+            content_type = ContentType.objects.get(model=model_class._meta.module_name,app_label=model_class._meta.app_label)
+        except ContentType.DoesNotExist:
+            content_type = None
+        custom_fields = CustomField.objects.filter(content_type=content_type)
+        return custom_fields
+    
+    
 @staff_member_required
 def match_columns(request, import_log_id):
     """ View to match import spreadsheet columns with database fields
@@ -112,6 +129,18 @@ def match_columns(request, import_log_id):
         if add:
             field_choices += ((field_name, field_verbose),)
     
+    # Include django-custom-field support
+    custom_fields = get_custom_fields_from_model(model_class)
+    for custom_field in custom_fields:
+        field_choices += (("simple_import_custom__{0}".format(custom_field),
+                           "{0} (Custom)".format(custom_field)),)
+    # Include defined methods
+    # Model must have a simple_import_methods defined
+    if hasattr(model_class, 'simple_import_methods'):
+        for import_method in model_class.simple_import_methods:
+            field_choices += (("simple_import_method__{0}".format(import_method),
+                               "{0} (Method)".format(import_method)),)
+    
     i = 0
     for form in formset:
         form.fields['field_name'].widget = forms.Select(choices=(field_choices))
@@ -143,17 +172,19 @@ def match_relations(request, import_log_id):
     field_names = []
     choice_set = []
     for match in matches.exclude(field_name=""):
-        field, model, direct, m2m = model_class._meta.get_field_by_name(match.field_name)
-        if m2m or isinstance(field, ForeignKey): 
-            RelationalMatch.objects.get_or_create(
-                import_log=import_log,
-                field_name=match.field_name)
-            field_names += [match.field_name]
-            choices = (('', '---------'),)
-            for field in get_direct_fields_from_model(field.related.parent_model()):
-                if field.unique:
-                    choices += ((field.name, field.verbose_name),)
-            choice_set += [choices]
+        if (not match.field_name.startswith('simple_import_custom__') and
+            not match.field_name.startswith('simple_import_method__')):
+            field, model, direct, m2m = model_class._meta.get_field_by_name(match.field_name)
+            if m2m or isinstance(field, ForeignKey): 
+                RelationalMatch.objects.get_or_create(
+                    import_log=import_log,
+                    field_name=match.field_name)
+                field_names += [match.field_name]
+                choices = (('', '---------'),)
+                for field in get_direct_fields_from_model(field.related.parent_model()):
+                    if field.unique:
+                        choices += ((field.name, field.verbose_name),)
+                choice_set += [choices]
     
     existing_matches = RelationalMatch.objects.filter(
         import_log=import_log,
@@ -180,23 +211,33 @@ def match_relations(request, import_log_id):
         
     return render_to_response(
         'simple_import/match_relations.html',
-        {'formset': formset},
+        {'formset': formset,
+         'existing_matches': existing_matches},
         RequestContext(request, {}),)
 
 def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Set a field from a import cell. Use referenced fields the field
     is m2m or a foreign key.
     """
-    field, model, direct, m2m =  new_object._meta.get_field_by_name(header_row_field_name)
-    if m2m:
-        new_object.simple_import_m2ms[header_row_field_name] = cell
-    elif isinstance(field, ForeignKey):
-        related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=field.name).related_field_name
-        related_model = field.related.parent_model
-        related_object = related_model.objects.get(**{related_field_name:cell})
-        setattr(new_object, header_row_field_name, related_object)
-    else:
-        setattr(new_object, header_row_field_name, cell)
+    print header_row_field_name
+    if (not header_row_field_name.startswith('simple_import_custom__') and
+            not header_row_field_name.startswith('simple_import_method__')):
+        field, model, direct, m2m =  new_object._meta.get_field_by_name(header_row_field_name)
+        if m2m:
+            new_object.simple_import_m2ms[header_row_field_name] = cell
+        elif isinstance(field, ForeignKey):
+            related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=field.name).related_field_name
+            related_model = field.related.parent_model
+            related_object = related_model.objects.get(**{related_field_name:cell})
+            setattr(new_object, header_row_field_name, related_object)
+        else:
+            setattr(new_object, header_row_field_name, cell)
+    elif header_row_field_name.startswith('simple_import_custom__'):
+        new_object.set_custom_value(header_row_field_name[22:], cell)
+    elif header_row_field_name.startswith('simple_import_method__'):
+        if header_row_field_name[22:] in new_object.simple_import_methods:
+            getattr(new_object, header_row_field_name[22:])(cell)
+       
 
 @staff_member_required
 def do_import(request, import_log_id):
