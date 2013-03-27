@@ -17,8 +17,8 @@ Project is minimally functional. Please evaluate before using in Production. Exp
 - Save user matches of column headers to fields
 - Guess matches
 - Create, Update, or do both imports
-- Allow programmers to define special import properties for custom handling (not implemented)
-- Set related objects by any unique field (not implemented)
+- Allow programmers to define special import methods for custom handling
+- Set related objects by any unique field
 - Simulate imports before commiting to database
 - Undo (create only) imports
 - Security checks if user has correct permissions (partially implemented)
