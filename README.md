@@ -37,6 +37,8 @@ urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
         def set_bar(self, value):
             self.bar = value
         simple_import_methods = ('set_bar',)
+        
+If you need any help we do consulting and custom development. Just email us at david at burkesoftware.com.
    
 
 ## Usage
