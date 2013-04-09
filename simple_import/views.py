@@ -18,24 +18,27 @@ import sys
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
-def validate_match_columns(import_log, field_names, model_class, header_row):
+def validate_match_columns(import_log, model_class, header_row):
     """ Perform some basic pre import validation to make sure it's
     even possible the import can work
     Returns list of errors
     """
     errors = []
     column_matches = import_log.import_setting.columnmatch_set.all()
+    field_names = model_class._meta.get_all_field_names()
     for field_name in field_names:
-        if (not field_name.startswith('simple_import_custom__') and
-            not field_name.startswith('simple_import_method__')):
-            field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-            if direct and not field_object.blank:
-                field_matches = column_matches.filter(field_name=field_name)
-                if field_matches:
-                    if field_matches[0].column_name not in header_row:
-                        errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
-                elif field_name[-4:] != "_ptr":
-                    errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
+        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        if direct and model and not field_object.blank:
+            field_matches = column_matches.filter(field_name=field_name)
+            match_in_header = False
+            if field_matches:
+                for field_match in field_matches:
+                    if field_match.column_name in header_row:
+                        match_in_header = True
+                if not match_in_header:
+                    errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
+            else:
+                errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
     
     return errors
 
@@ -90,7 +93,6 @@ def match_columns(request, import_log_id):
                     errors += ['Please select an update key. This key is used to linked records for updating.']
             errors += validate_match_columns(
                 import_log,
-                field_names,
                 model_class,
                 header_row)
             all_field_names = []
