@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name = "django-simple-import",
-    version = "1.0.1",
+    version = "1.1",
     author = "David Burke",
     author_email = "david@burkesoftware.com",
-    description = ("An Django import tool easy enough your users could use it"),
+    description = ("A Django import tool easy enough your users could use it"),
     license = "BSD",
     keywords = "django import",
     url = "https://github.com/burke-software/django-simple-import",
