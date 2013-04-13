@@ -56,8 +56,8 @@ class ODSReader:
 						if (n.nodeType == 3):
 							textContent = textContent + unicode(n.data)
 					
-				if(textContent):
-					if(textContent[0] != "#"): # ignore comments cells
+				if(textContent or textContent == ""):
+					if(textContent == "" or textContent[0] != "#"): # ignore comments cells
 						for rr in range(int(repeat)): # repeated?
 							arrCells.append(textContent)
 						
