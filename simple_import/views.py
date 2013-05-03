@@ -133,8 +133,9 @@ def match_columns(request, import_log_id):
     
     # Include django-custom-field support
     custom_fields = get_custom_fields_from_model(model_class)
-    for custom_field in custom_fields:
-        field_choices += (("simple_import_custom__{0}".format(custom_field),
+    if custom_fields:
+        for custom_field in custom_fields:
+            field_choices += (("simple_import_custom__{0}".format(custom_field),
                            "{0} (Custom)".format(custom_field)),)
     # Include defined methods
     # Model must have a simple_import_methods defined
