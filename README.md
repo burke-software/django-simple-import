@@ -4,9 +4,9 @@ django-simple-import
 An import tool easy enough your users could use it. django-simple-import aims to keep track of logs 
 and user preferences in the database. 
 
-1.0 has been released to pypi
+1.1.1 has been released to pypi
 
-Project is minimally functional. Please evaluate before using in Production. Expect more features soon.
+Project is minimally functional. Please evaluate before using in Production.
 
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
@@ -16,8 +16,9 @@ Project is minimally functional. Please evaluate before using in Production. Exp
 - Supports csv, xls, xlsx, and ods import file
 - Save user matches of column headers to fields
 - Guess matches
-- Create, Update, or do both imports
+- Create, update, or both
 - Allow programmers to define special import methods for custom handling
+- Support for django-custom-fields
 - Set related objects by any unique field
 - Simulate imports before commiting to database
 - Undo (create only) imports
@@ -50,6 +51,6 @@ See example of customization [here](https://github.com/burke-software/django-sis
 
 ### Security
 I'm working on the assumtion staff users are trusted. Only users with change permission 
-to a field will see it as an option. But I have not spent much time looking for ways users could
-manipulate urls to run unauthorized imports. Feel free to contribute if this is a need you have.
+to a field will see it as an option. I have not spent much time looking for ways users could
+manipulate urls to run unauthorized imports. Feel free to contribute changes.
 All import views do require admin "is staff" permission.
