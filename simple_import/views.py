@@ -351,7 +351,7 @@ def do_import(request, import_log_id):
             except ValueError:
                 exc = sys.exc_info()
                 if str(exc[1]).startswith('invalid literal for int() with base 10'):
-                    error_data += [row + ["Value Error - Expected number but got a character", unicode(exc[1])]] 
+                    error_data += [row + ["Incompatible Data - A number was expected, but a character was used", unicode(exc[1])]] 
                 else:
                     error_data += [row + ["Value Error", unicode(exc[1])]]
                 fail_count += 1
