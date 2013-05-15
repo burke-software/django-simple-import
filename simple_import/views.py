@@ -347,6 +347,13 @@ def do_import(request, import_log_id):
                 exc = sys.exc_info()
                 error_data += [row + ["No Record Found to Update", unicode(exc[1])]]
                 fail_count += 1
+            except ValueError:
+                exc = sys.exc_info()
+                if str(exc[1]).startswith('invalid literal for int() with base 10'):
+                    error_data += [row + ["Value Error - Expected number but got a character", unicode(exc[1])]] 
+                else:
+                    error_data += [row + ["Value Error", unicode(exc[1])]]
+                fail_count += 1
             except:
                 exc = sys.exc_info()
                 error_data += [row + ["Unknown Error", unicode(exc[1])]]
