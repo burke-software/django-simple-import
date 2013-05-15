@@ -183,7 +183,7 @@ def match_relations(request, import_log_id):
                     import_log=import_log,
                     field_name=match.field_name)
                 field_names += [match.field_name]
-                choices = (('', '---------'),)
+                choices = ()
                 for field in get_direct_fields_from_model(field.related.parent_model()):
                     if field.unique:
                         choices += ((field.name, field.verbose_name),)
