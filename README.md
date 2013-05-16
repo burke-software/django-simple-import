@@ -18,7 +18,7 @@ Project is minimally functional. Please evaluate before using in Production.
 - Guess matches
 - Create, update, or both
 - Allow programmers to define special import methods for custom handling
-- Support for django-custom-fields
+- Support for [django-custom-field](https://github.com/burke-software/django-custom-field)
 - Set related objects by any unique field
 - Simulate imports before commiting to database
 - Undo (create only) imports
