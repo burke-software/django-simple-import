@@ -13,7 +13,7 @@ Project is minimally functional. Please evaluate before using in Production.
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/do_import.png)
 
 ## Features
-- Supports csv, xls, xlsx, and ods import file
+- Supports csv, xls, xlsx, and ods ([Warning: ods support is poor](https://github.com/burke-software/django-simple-import/issues/10)) import file
 - Save user matches of column headers to fields
 - Guess matches
 - Create, update, or both
