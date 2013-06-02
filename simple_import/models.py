@@ -138,6 +138,18 @@ class ImportLog(models.Model):
             from odsreader import ODSReader
             doc = ODSReader(self.import_file.path)
             table = doc.SHEETS.items()[0]
+
+            # Remove blank columns that ods files seems to have
+            blank_columns = []
+            for i, header_cell in enumerate(table[1][0]):
+                if header_cell == "":
+                    blank_columns += [i]
+            # just an overly complicated way to remove these
+            # indexes from a list
+            for offset, blank_column in enumerate(blank_columns):
+                for row in table[1]:
+                    del row[blank_column - offset]
+
             if only_header:
                 data += [table[1][0]]
             else:
