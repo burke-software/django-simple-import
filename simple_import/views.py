@@ -28,7 +28,7 @@ def validate_match_columns(import_log, model_class, header_row):
     field_names = model_class._meta.get_all_field_names()
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-        if direct and model and not field_object.blank:
+        if direct and model and not field_object.blank and import_log.import_type != "O": # Skip if Update Only
             field_matches = column_matches.filter(field_name=field_name)
             match_in_header = False
             if field_matches:
