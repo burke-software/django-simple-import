@@ -88,19 +88,20 @@ class ImportLog(models.Model):
         header_row = self.get_import_file_as_list(only_header=True)
         match_ids = []
         for cell in header_row:
-            try:
-                match = ColumnMatch.objects.get(
-                    import_setting = self.import_setting,
-                    column_name = cell,
-                )
-            except ColumnMatch.DoesNotExist:
-                match = ColumnMatch(
-                    import_setting = self.import_setting,
-                    column_name = cell,
-                )
-                match.guess_field()
-                match.save()
-            match_ids += [match.id]
+            if cell: # Sometimes we get blank headers, ignore them.
+                try:
+                    match = ColumnMatch.objects.get(
+                        import_setting = self.import_setting,
+                        column_name = cell,
+                    )
+                except ColumnMatch.DoesNotExist:
+                    match = ColumnMatch(
+                        import_setting = self.import_setting,
+                        column_name = cell,
+                    )
+                    match.guess_field()
+                    match.save()
+                match_ids += [match.id]
         
         return ColumnMatch.objects.filter(id__in=match_ids)
 
