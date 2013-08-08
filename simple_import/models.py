@@ -17,6 +17,7 @@ class ColumnMatch(models.Model):
     import_setting = models.ForeignKey(ImportSetting)
     default_value = models.CharField(max_length=2000, blank=True)
     null_on_empty = models.BooleanField(help_text="If cell is blank, clear out the field setting it to blank.")
+    header_position = models.IntegerField(help_text="Annoying way to order the columns to match the header rows")
     
     class Meta:
         unique_together = ('column_name', 'import_setting')
@@ -86,8 +87,9 @@ class ImportLog(models.Model):
         """ Get each matching header row to database match
         Returns a ColumnMatch queryset"""
         header_row = self.get_import_file_as_list(only_header=True)
+        matches = ColumnMatch.objects.none()
         match_ids = []
-        for cell in header_row:
+        for i, cell in enumerate(header_row):
             if cell: # Sometimes we get blank headers, ignore them.
                 try:
                     match = ColumnMatch.objects.get(
@@ -100,10 +102,10 @@ class ImportLog(models.Model):
                         column_name = cell,
                     )
                     match.guess_field()
-                    match.save()
+                match.header_position = i
+                match.save()
                 match_ids += [match.id]
-        
-        return ColumnMatch.objects.filter(id__in=match_ids)
+        return ColumnMatch.objects.filter(pk__in=match_ids).order_by('header_position')
 
     def get_import_file_as_list(self, only_header=False):
         file_ext = str(self.import_file).lower()[-3:]

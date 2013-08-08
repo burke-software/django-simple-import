@@ -14,6 +14,7 @@ class ImportForm(forms.ModelForm):
 class MatchForm(forms.ModelForm):
     class Meta:
         model = ColumnMatch
+        exclude = ['header_position']
 
 class MatchRelationForm(forms.ModelForm):
     class Meta:

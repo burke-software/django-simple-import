@@ -106,7 +106,7 @@ def match_columns(request, import_log_id):
                     match_relations,
                     kwargs={'import_log_id': import_log.id}))
     else:
-        existing_matches = import_log.get_matches()
+        existing_matches = import_log.get_matches()        
         formset = MatchFormSet(queryset=existing_matches)
         
     field_choices = (('', 'Do Not Use'),)

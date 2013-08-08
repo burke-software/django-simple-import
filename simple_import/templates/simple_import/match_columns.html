@@ -1,6 +1,7 @@
 <h1>Match columns</h1>
 <form action="" method="post">{% csrf_token %}
     {{ formset.management_form }}
+    {{ formset.errors }}
     {% if errors %}
         <ul>
             {% for error in errors %}
