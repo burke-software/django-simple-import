@@ -232,6 +232,15 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
             related_model = field.related.parent_model
             related_object = related_model.objects.get(**{related_field_name:cell})
             setattr(new_object, header_row_field_name, related_object)
+        elif field.choices and getattr(settings, 'SIMPLE_IMPORT_LAZY_CHOICES', True):
+            # Prefer database values over choices lookup
+            database_values, verbose_values = zip(*field.choices)
+            if cell in database_values:
+                setattr(new_object, header_row_field_name, cell)
+            elif cell in verbose_values:
+                for choice in field.choices:
+                    if unicode(cell) == unicode(choice[1]):
+                        setattr(new_object, header_row_field_name, choice[0])
         else:
             setattr(new_object, header_row_field_name, cell)
     elif header_row_field_name.startswith('simple_import_custom__'):

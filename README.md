@@ -31,7 +31,9 @@ Project is minimally functional. Please evaluate before using in Production.
 1. Add simple_import to urls.py like
 urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
 1. syncdb (you may use south)
-1. (Optional) define allowed methods to be "imported". Example:
+
+## Optional Settings
+Define allowed methods to be "imported". Example:
 
     class Foo(models.Model):
         ...
@@ -39,6 +41,13 @@ urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
             self.bar = value
         simple_import_methods = ('set_bar',)
         
+### settings.py
+SIMPLE_IMPORT_LAZY_CHOICES: Default True. If enabled simple_import will look up choices when importing. Example:
+
+    choices  = ['M', 'Monday']
+
+If the spreadsheet value is "Monday" it will set the database value to "M".
+
 If you need any help we do consulting and custom development. Just email us at david at burkesoftware.com.
    
 
