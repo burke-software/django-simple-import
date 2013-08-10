@@ -42,10 +42,10 @@ If you need any help we do consulting and custom development. Just email us at d
 
 ## Usage
 
-Go to /simple_import/start_import/ or use the admin interface
+Go to /simple_import/start_import/ or use the admin interface.
 
-In the screenshots I gave them a django-grappelli theme. The base templates have no style and are very basic. 
-See example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import)
+The screenshots have a django-grappelli like theme. The base templates have no style and are very basic. 
+See example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import).
 
 There is also a log of import records. Check out /admin/simple_import/
 
