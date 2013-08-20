@@ -4,9 +4,7 @@ django-simple-import
 An import tool easy enough your users could use it. django-simple-import aims to keep track of logs 
 and user preferences in the database. 
 
-1.1.1 has been released to pypi
-
-Project is minimally functional. Please evaluate before using in Production.
+Project is now stable and feature complete. Of course it's always a good idea to test before deploying.
 
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
@@ -53,10 +51,12 @@ If you need any help we do consulting and custom development. Just email us at d
 
 ## Usage
 
-Go to /simple_import/start_import/ or use the admin interface
+Go to /simple_import/start_import/ or use the admin interface.
 
-In the screenshots I gave them a django-grappelli theme. The base templates have no style and are very basic. 
-See example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import)
+The screenshots have a django-grappelli like theme. The base templates have no style and are very basic. 
+See example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import).
+
+There is also a log of import records. Check out /admin/simple_import/
 
 ### Security
 I'm working on the assumtion staff users are trusted. Only users with change permission 
