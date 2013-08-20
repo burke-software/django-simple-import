@@ -313,10 +313,11 @@ def do_import(request, import_log_id):
                         new_object = model_class()
                 new_object.simple_import_m2ms = {} # Need to deal with these after saving
                 for i, cell in enumerate(row):
-                    if cell or header_row_null_on_empty[i]:
-                        set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
-                    elif header_row_default[i]:
-                        set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
+                    if header_row_field_names[i]: # skip blank
+                        if cell or header_row_null_on_empty[i]:
+                            set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
+                        elif header_row_default[i]:
+                            set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
                 new_object.save()
                 
                 for key in new_object.simple_import_m2ms.keys():
