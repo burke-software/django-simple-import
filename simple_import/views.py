@@ -251,8 +251,7 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     elif header_row_field_name.startswith('simple_import_custom__'):
         new_object.set_custom_value(header_row_field_name[22:], cell)
     elif header_row_field_name.startswith('simple_import_method__'):
-        if header_row_field_name[22:] in new_object.simple_import_methods:
-            getattr(new_object, header_row_field_name[22:])(cell)
+        getattr(new_object, header_row_field_name[22:])(cell)
        
 
 @staff_member_required
