@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.admin.views.decorators import staff_member_required
@@ -143,6 +144,10 @@ def match_columns(request, import_log_id):
         for import_method in model_class.simple_import_methods:
             field_choices += (("simple_import_method__{0}".format(import_method),
                                "{0} (Method)".format(import_method)),)
+    # User model should allow set password
+    if model_class == User:
+        field_choices += (("simple_import_method__{0}".format('set_password'),
+                               "Set Password (Method)"),) 
     
     i = 0
     for form in formset:
