@@ -295,7 +295,7 @@ def do_import(request, import_log_id):
         header_row_field_names += [match.field_name]
         header_row_default += [match.default_value]
         header_row_null_on_empty += [match.null_on_empty]
-        if key_column_name == cell:
+        if key_column_name == cell.lower():
             key_index = i
     
     with transaction.commit_manually():
