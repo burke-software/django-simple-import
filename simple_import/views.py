@@ -34,7 +34,7 @@ def validate_match_columns(import_log, model_class, header_row):
             match_in_header = False
             if field_matches:
                 for field_match in field_matches:
-                    if field_match.column_name in header_row:
+                    if field_match.column_name.lower() in header_row:
                         match_in_header = True
                 if not match_in_header:
                     errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
@@ -67,7 +67,7 @@ def match_columns(request, import_log_id):
     
     MatchFormSet = modelformset_factory(ColumnMatch, form=MatchForm, extra=0)
     import_data = import_log.get_import_file_as_list()
-    header_row = import_data[0]
+    header_row = [x.lower() for x in import_data[0]] # make all lower 
     sample_row = import_data[1]
     errors = []
     
