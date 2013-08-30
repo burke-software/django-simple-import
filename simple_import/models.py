@@ -4,6 +4,7 @@ from django.contrib.contenttypes import generic
 from django.db import models
 from django.conf import settings
 from django.db import transaction
+import datetime
 
 class ImportSetting(models.Model):
     """ Save some settings per user per content type """
@@ -115,8 +116,15 @@ class ImportLog(models.Model):
             import os
             wb = xlrd.open_workbook(os.path.join(settings.MEDIA_ROOT, self.import_file.file.name))
             sh1 = wb.sheet_by_index(0)
-            for rownum in range(sh1.nrows): 
-                data += [sh1.row_values(rownum)]
+            for rownum in range(sh1.nrows):
+                row_values = []
+                for cell in sh1.row(rownum):
+                    # xlrd is too dumb to just check for dates. So we have to ourselves
+                    if cell.ctype == 3: # 3 is date - http://www.lexicon.net/sjmachin/xlrd.html#xlrd.Cell-class
+                        row_values += [datetime.datetime(*xlrd.xldate_as_tuple(cell.value, wb.datemode))]
+                    else:
+                        row_values += [cell.value]
+                data += [row_values]
                 if only_header:
                     break
         elif file_ext == "csv":
