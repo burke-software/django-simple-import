@@ -165,6 +165,16 @@ class ImportLog(models.Model):
                 data += [table[1][0]]
             else:
                 data += table[1]
+        # Remove blank columns. We use the header row as a unique index. Can't handle blanks.
+        columns_to_del = []
+        for i, header_cell in enumerate(data[0]):
+            if not header_cell:
+                columns_to_del += [i]
+        num_deleted = 0
+        for column_to_del in columns_to_del:
+            for row in data:
+                del row[i - num_deleted]
+            num_deleted += 1
         if only_header:
             return data[0]
         return data
