@@ -173,7 +173,7 @@ class ImportLog(models.Model):
         num_deleted = 0
         for column_to_del in columns_to_del:
             for row in data:
-                del row[i - num_deleted]
+                del row[column_to_del - num_deleted]
             num_deleted += 1
         if only_header:
             return data[0]
