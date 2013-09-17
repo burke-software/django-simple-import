@@ -11,6 +11,10 @@ class ImportSetting(models.Model):
     user = models.ForeignKey(User)
     content_type = models.ForeignKey(ContentType)
     
+    class Meta():
+        unique_together = ('user', 'content_type',)
+    
+    
 class ColumnMatch(models.Model):
     """ Match column names from the user uploaded file to the database """
     column_name = models.CharField(max_length=200)
