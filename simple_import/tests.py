@@ -1,8 +1,9 @@
+import os
+
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.test.client import Client
-from django.contrib.staticfiles import finders
-from django.contrib.auth.models import User
+from simple_import.compat import User
 from simple_import.models import *
 from django.core.files import File
 
@@ -14,7 +15,7 @@ class SimpleTest(TestCase):
         user.save()
         self.c = Client()
         self.c.login(username='temporary', password='temporary')
-        self.absolute_path = finders.find('test_import.xls')
+        self.absolute_path = os.path.join(os.path.dirname(__file__), 'static', 'test_import.xls')
         self.import_setting = ImportSetting.objects.create(
             user=user,
             content_type=ContentType.objects.get(name="import log", app_label="simple_import")

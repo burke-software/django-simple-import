@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.admin.views.decorators import staff_member_required
@@ -16,6 +15,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 import sys
 
+from simple_import.compat import User
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
@@ -73,8 +73,8 @@ def match_columns(request, import_log_id):
     
     model_class = import_log.import_setting.content_type.model_class()
     field_names = model_class._meta.get_all_field_names()
-        
-    if request.POST:
+    
+    if request.method == 'POST':
         formset = MatchFormSet(request.POST)
         if formset.is_valid():
             formset.save()
@@ -107,9 +107,9 @@ def match_columns(request, import_log_id):
                     match_relations,
                     kwargs={'import_log_id': import_log.id}))
     else:
-        existing_matches = import_log.get_matches()        
+        existing_matches = import_log.get_matches()
         formset = MatchFormSet(queryset=existing_matches)
-        
+    
     field_choices = (('', 'Do Not Use'),)
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
@@ -149,11 +149,9 @@ def match_columns(request, import_log_id):
         field_choices += (("simple_import_method__{0}".format('set_password'),
                                "Set Password (Method)"),) 
     
-    i = 0
-    for form in formset:
+    for i, form in enumerate(formset):
         form.fields['field_name'].widget = forms.Select(choices=(field_choices))
         form.sample = sample_row[i]
-        i += 1
     
     return render_to_response(
         'simple_import/match_columns.html',
@@ -200,7 +198,7 @@ def match_relations(request, import_log_id):
     MatchRelationFormSet = modelformset_factory(
         RelationalMatch,
         form=MatchRelationForm, extra=0)
-    if request.POST:
+    if request.method == 'POST':
         formset = MatchRelationFormSet(request.POST)
         if formset.is_valid():
             formset.save()
@@ -413,14 +411,14 @@ def do_import(request, import_log_id):
 def start_import(request):
     """ View to create a new import record
     """
-    if request.POST:
+    if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
             import_log = form.save(commit=False)
             import_log.user = request.user
             import_log.import_setting, created = ImportSetting.objects.get_or_create(
                 user=request.user,
-                content_type=ContentType.objects.get(id=form.data['model']),
+                content_type=form.cleaned_data['model'],
             )
             import_log.save()
             return HttpResponseRedirect(reverse(match_columns, kwargs={'import_log_id': import_log.id}))

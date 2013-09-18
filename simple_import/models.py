@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.db import models
@@ -6,9 +5,11 @@ from django.conf import settings
 from django.db import transaction
 import datetime
 
+from simple_import.compat import AUTH_USER_MODEL
+
 class ImportSetting(models.Model):
     """ Save some settings per user per content type """
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(AUTH_USER_MODEL)
     content_type = models.ForeignKey(ContentType)
     
     class Meta():
@@ -57,7 +58,7 @@ class ColumnMatch(models.Model):
 class ImportLog(models.Model):
     """ A log of all import attempts """
     name = models.CharField(max_length=255)
-    user = models.ForeignKey(User, editable=False, related_name="simple_import_log")
+    user = models.ForeignKey(AUTH_USER_MODEL, editable=False, related_name="simple_import_log")
     date = models.DateTimeField(auto_now_add=True, verbose_name="Date Created")
     import_file = models.FileField(upload_to="import_file")
     error_file = models.FileField(upload_to="error_file", blank=True)
@@ -115,10 +116,14 @@ class ImportLog(models.Model):
     def get_import_file_as_list(self, only_header=False):
         file_ext = str(self.import_file).lower()[-3:]
         data = []
+        
+        self.import_file.seek(0)
+        
         if file_ext == "xls":
             import xlrd
             import os
-            wb = xlrd.open_workbook(os.path.join(settings.MEDIA_ROOT, self.import_file.file.name))
+            
+            wb = xlrd.open_workbook(file_contents=self.import_file.read())
             sh1 = wb.sheet_by_index(0)
             for rownum in range(sh1.nrows):
                 row_values = []
@@ -133,14 +138,15 @@ class ImportLog(models.Model):
                     break
         elif file_ext == "csv":
             import csv
-            reader = csv.reader(open(self.import_file.path, "rb"))
+            reader = csv.reader(self.import_file)
             for row in reader:
                 data += [row]
                 if only_header:
                     break
         elif file_ext == "lsx":
             from openpyxl.reader.excel import load_workbook
-            wb = load_workbook(filename=self.import_file.path, use_iterators = True)
+            # load_workbook actually accepts a file-like object for the filename param
+            wb = load_workbook(filename=self.import_file, use_iterators = True)
             sheet = wb.get_active_sheet()
             for row in sheet.iter_rows():
                 data_row = []
@@ -150,8 +156,8 @@ class ImportLog(models.Model):
                 if only_header:
                     break
         elif file_ext == "ods":
-            from odsreader import ODSReader
-            doc = ODSReader(self.import_file.path)
+            from .odsreader import ODSReader
+            doc = ODSReader(self.import_file)
             table = doc.SHEETS.items()[0]
 
             # Remove blank columns that ods files seems to have
