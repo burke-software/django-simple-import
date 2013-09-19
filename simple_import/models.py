@@ -14,8 +14,8 @@ class ImportSetting(models.Model):
     
     class Meta():
         unique_together = ('user', 'content_type',)
-    
-    
+
+
 class ColumnMatch(models.Model):
     """ Match column names from the user uploaded file to the database """
     column_name = models.CharField(max_length=200)
@@ -52,9 +52,8 @@ class ColumnMatch(models.Model):
             if hasattr(field, 'verbose_name'):
                 if field.verbose_name.lower().replace(' ', '_') == normalized_field_name:
                     self.field_name = field_name
-            
 
-    
+
 class ImportLog(models.Model):
     """ A log of all import attempts """
     name = models.CharField(max_length=255)
@@ -93,24 +92,29 @@ class ImportLog(models.Model):
         """ Get each matching header row to database match
         Returns a ColumnMatch queryset"""
         header_row = self.get_import_file_as_list(only_header=True)
-        matches = ColumnMatch.objects.none()
         match_ids = []
+        
         for i, cell in enumerate(header_row):
-            if cell: # Sometimes we get blank headers, ignore them.
-                try:
-                    match = ColumnMatch.objects.get(
-                        import_setting = self.import_setting,
-                        column_name = cell,
-                    )
-                except ColumnMatch.DoesNotExist:
-                    match = ColumnMatch(
-                        import_setting = self.import_setting,
-                        column_name = cell,
-                    )
-                    match.guess_field()
-                match.header_position = i
-                match.save()
-                match_ids += [match.id]
+            if not cell: # Sometimes we get blank headers, ignore them.
+                continue
+            
+            try:
+                match = ColumnMatch.objects.get(
+                    import_setting = self.import_setting,
+                    column_name = cell,
+                )
+            except ColumnMatch.DoesNotExist:
+                match = ColumnMatch(
+                    import_setting = self.import_setting,
+                    column_name = cell,
+                )
+                match.guess_field()
+            
+            match.header_position = i
+            match.save()
+            
+            match_ids += [match.id]
+        
         return ColumnMatch.objects.filter(pk__in=match_ids).order_by('header_position')
 
     def get_import_file_as_list(self, only_header=False):
@@ -203,9 +207,10 @@ class RelationalMatch(models.Model):
     field_name = models.CharField(max_length=255) # Ex student_number_set
     related_field_name = models.CharField(max_length=255, blank=True) # Ex username
 
-    
+
 class ImportedObject(models.Model):
     import_log = models.ForeignKey(ImportLog)
     object_id = models.IntegerField()
     content_type = models.ForeignKey(ContentType)
     content_object = generic.GenericForeignKey('content_type', 'object_id')
+
