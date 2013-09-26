@@ -29,17 +29,21 @@ def validate_match_columns(import_log, model_class, header_row):
     field_names = model_class._meta.get_all_field_names()
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-        if direct and model and not field_object.blank and import_log.import_type != "O": # Skip if Update Only
-            field_matches = column_matches.filter(field_name=field_name)
-            match_in_header = False
-            if field_matches:
-                for field_match in field_matches:
-                    if field_match.column_name.lower() in header_row:
-                        match_in_header = True
-                if not match_in_header:
-                    errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name)]
-            else:
-                errors += ["{0} is required but has no match.".format(field_object.verbose_name)]
+        # Skip if update only and skip ptr which suggests it's a django inherited field
+        # Also some hard coded ones for Django Auth
+        if import_log.import_type != "O" and field_name[-3:] != "ptr" and \
+            not field_name in ['password', 'date_joined', 'last_login']: 
+            if (direct and model and not field_object.blank) or (not getattr(field_object, "blank", True)):
+                field_matches = column_matches.filter(field_name=field_name)
+                match_in_header = False
+                if field_matches:
+                    for field_match in field_matches:
+                        if field_match.column_name.lower() in header_row:
+                            match_in_header = True
+                    if not match_in_header:
+                        errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name.title())]
+                else:
+                    errors += ["{0} is required but has no match.".format(field_object.verbose_name.title())]
     
     return errors
 
@@ -145,7 +149,7 @@ def match_columns(request, import_log_id):
             field_choices += (("simple_import_method__{0}".format(import_method),
                                "{0} (Method)".format(import_method)),)
     # User model should allow set password
-    if model_class == User:
+    if issubclass(model_class, User):
         field_choices += (("simple_import_method__{0}".format('set_password'),
                                "Set Password (Method)"),) 
     

@@ -58,6 +58,13 @@ See example of customization [here](https://github.com/burke-software/django-sis
 
 There is also a log of import records. Check out /admin/simple_import/
 
+## Odd Things
+
+Added a special set password property on auth.User to set password. This sets the password instead of just
+saving a hash.
+
+User has some required fields that...aren't really required. Hardcoded to let them pass.
+
 ### Security
 I'm working on the assumtion staff users are trusted. Only users with change permission 
 to a field will see it as an option. I have not spent much time looking for ways users could
