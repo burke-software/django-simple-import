@@ -252,9 +252,15 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
                         setattr(new_object, header_row_field_name, choice[0])
         else:
             setattr(new_object, header_row_field_name, cell)
+    
+    
+def set_method_from_cell(import_log, new_object, header_row_field_name, cell):
+    """ Run a method from a import cell.
+    """
+    if (not header_row_field_name.startswith('simple_import_custom__') and
+            not header_row_field_name.startswith('simple_import_method__')):
+        pass
     elif header_row_field_name.startswith('simple_import_custom__'):
-        if not new_object.id: # This is required for custom fields!
-            new_object.save()
         new_object.set_custom_value(header_row_field_name[22:], cell)
     elif header_row_field_name.startswith('simple_import_method__'):
         getattr(new_object, header_row_field_name[22:])(cell)
@@ -329,6 +335,20 @@ def do_import(request, import_log_id):
                         elif header_row_default[i]:
                             set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
                 new_object.save()
+
+                for i, cell in enumerate(row):
+                    if header_row_field_names[i]: # skip blank
+                        if cell or header_row_null_on_empty[i]:
+                            set_method_from_cell(import_log, new_object, header_row_field_names[i], cell)
+                        elif header_row_default[i]:
+                            set_method_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
+
+                for i, cell in enumerate(row):
+                    if header_row_field_names[i]: # skip blank
+                        if cell or header_row_null_on_empty[i]:
+                            set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
+                        elif header_row_default[i]:
+                            set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
                 
                 for key in new_object.simple_import_m2ms.keys():
                     value = new_object.simple_import_m2ms[key]
