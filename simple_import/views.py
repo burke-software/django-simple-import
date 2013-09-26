@@ -253,6 +253,8 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
         else:
             setattr(new_object, header_row_field_name, cell)
     elif header_row_field_name.startswith('simple_import_custom__'):
+        if not new_object.id: # This is required for custom fields!
+            new_object.save()
         new_object.set_custom_value(header_row_field_name[22:], cell)
     elif header_row_field_name.startswith('simple_import_method__'):
         getattr(new_object, header_row_field_name[22:])(cell)
