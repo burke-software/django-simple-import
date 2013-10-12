@@ -15,6 +15,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 import sys
+from django.db.models.fields import AutoField
 
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
@@ -41,10 +42,9 @@ def validate_match_columns(import_log, model_class, header_row):
                         if field_match.column_name.lower() in header_row:
                             match_in_header = True
                     if not match_in_header:
-                        errors += ["{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name.title())]
+                        errors += [u"{0} is required but is not in your spreadsheet. ".format(field_object.verbose_name.title())]
                 else:
-                    errors += ["{0} is required but has no match.".format(field_object.verbose_name.title())]
-    
+                    errors += [u"{0} is required but has no match.".format(field_object.verbose_name.title())]
     return errors
 
 
@@ -77,6 +77,10 @@ def match_columns(request, import_log_id):
     
     model_class = import_log.import_setting.content_type.model_class()
     field_names = model_class._meta.get_all_field_names()
+    for field_name in field_names:
+        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        if import_log.import_type == "N" and isinstance(field_object, AutoField):
+            field_names.remove(field_name)
         
     if request.POST:
         formset = MatchFormSet(request.POST)
