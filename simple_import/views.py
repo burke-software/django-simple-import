@@ -427,7 +427,7 @@ def do_import(request, import_log_id):
     
             
     if fail_count:
-        from io import StringIO
+        import cStringIO as StringIO
         from django.core.files.base import ContentFile
         from openpyxl.workbook import Workbook
         from openpyxl.writer.excel import save_virtual_workbook
@@ -438,9 +438,8 @@ def do_import(request, import_log_id):
         filename = 'Errors.xlsx'
         for row in error_data:
             ws.append(row)
-        buf = StringIO()
-        # Not Python 3 compatible 
-        buf.write(unicode(save_virtual_workbook(wb)), )
+        buf = StringIO.StringIO()
+        buf.write(save_virtual_workbook(wb))
         import_log.error_file.save(filename, ContentFile(buf.getvalue()))
         import_log.save()
     
