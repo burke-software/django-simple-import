@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.admin.views.decorators import staff_member_required
@@ -10,7 +9,7 @@ from django.db.models import Q, ForeignKey
 from django.db import transaction
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
-from django.forms.models import modelformset_factory
+from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
@@ -18,6 +17,7 @@ import sys
 from django.db.models.fields import AutoField
 from django.utils.encoding import smart_text
 
+from simple_import.compat import User
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
@@ -60,17 +60,22 @@ def get_custom_fields_from_model(model_class):
             content_type = None
         custom_fields = CustomField.objects.filter(content_type=content_type)
         return custom_fields
-    
-    
+
+
 @staff_member_required
 def match_columns(request, import_log_id):
     """ View to match import spreadsheet columns with database fields
     """
     import_log = get_object_or_404(ImportLog, id=import_log_id)
+    
     if not request.user.is_superuser and import_log.user != request.user:
         raise SuspiciousOperation("Non superuser attempting to view other users import")
     
-    MatchFormSet = modelformset_factory(ColumnMatch, form=MatchForm, extra=0)
+    # need to generate matches if they don't exist already
+    import_log.get_matches()
+    
+    MatchFormSet = inlineformset_factory(ImportSetting, ColumnMatch, form=MatchForm, extra=0)
+    
     import_data = import_log.get_import_file_as_list()
     header_row = [x.lower() for x in import_data[0]] # make all lower 
     sample_row = import_data[1]
@@ -84,17 +89,20 @@ def match_columns(request, import_log_id):
         if import_log.import_type == "N" and isinstance(field_object, AutoField):
             field_names.remove(field_name)
         
-    if request.POST:
-        formset = MatchFormSet(request.POST)
+    if request.method == 'POST':
+        formset = MatchFormSet(request.POST, instance=import_log.import_setting)
         if formset.is_valid():
             formset.save()
             if import_log.import_type in ["U", "O"]:
-                if 'update_key' in request.POST and request.POST['update_key']:
-                    field_name = import_log.import_setting.columnmatch_set.get(column_name=request.POST['update_key']).field_name
+                update_key = request.POST.get('update_key', '')
+                
+                if update_key:
+                    field_name = import_log.import_setting.columnmatch_set.get(column_name=update_key).field_name
                     if field_name:
                         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+                        
                         if direct and field_object.unique:
-                            import_log.update_key = request.POST['update_key']
+                            import_log.update_key = update_key
                             import_log.save()
                         else:
                             errors += ['Update key must be unique. Please select a unique field.']
@@ -106,6 +114,7 @@ def match_columns(request, import_log_id):
                 import_log,
                 model_class,
                 header_row)
+            
             all_field_names = []
             for clean_data in formset.cleaned_data:
                 if clean_data['field_name']:
@@ -117,9 +126,8 @@ def match_columns(request, import_log_id):
                     match_relations,
                     kwargs={'import_log_id': import_log.id}))
     else:
-        existing_matches = import_log.get_matches()        
-        formset = MatchFormSet(queryset=existing_matches)
-        
+        formset = MatchFormSet(instance=import_log.import_setting)
+    
     field_choices = (('', 'Do Not Use'),)
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
@@ -159,15 +167,13 @@ def match_columns(request, import_log_id):
         field_choices += (("simple_import_method__{0}".format('set_password'),
                                "Set Password (Method)"),) 
     
-    i = 0
-    for form in formset:
+    for i, form in enumerate(formset):
         form.fields['field_name'].widget = forms.Select(choices=(field_choices))
         form.sample = sample_row[i]
-        i += 1
     
     return render_to_response(
         'simple_import/match_columns.html',
-        {'import_log': import_log, 'formset':formset, 'errors': errors},
+        {'import_log': import_log, 'formset': formset, 'errors': errors},
         RequestContext(request, {}),)
 
 
@@ -189,44 +195,53 @@ def match_relations(request, import_log_id):
     matches = import_log.get_matches()
     field_names = []
     choice_set = []
+    
     for match in matches.exclude(field_name=""):
-        if (not match.field_name.startswith('simple_import_custom__') and
-            not match.field_name.startswith('simple_import_method__')):
-            field, model, direct, m2m = model_class._meta.get_field_by_name(match.field_name)
+        field_name = match.field_name
+        
+        if not field_name.startswith('simple_import_custom__') and \
+                not field_name.startswith('simple_import_method__'):
+            field, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+            
             if m2m or isinstance(field, ForeignKey): 
                 RelationalMatch.objects.get_or_create(
                     import_log=import_log,
-                    field_name=match.field_name)
-                field_names += [match.field_name]
+                    field_name=field_name)
+                
+                field_names.append(field_name)
                 choices = ()
                 for field in get_direct_fields_from_model(field.related.parent_model()):
                     if field.unique:
-                        choices += ((field.name, field.verbose_name),)
+                        choices += ((field.name, unicode(field.verbose_name)),)
                 choice_set += [choices]
     
-    existing_matches = RelationalMatch.objects.filter(
-        import_log=import_log,
-        field_name__in=field_names)
-    MatchRelationFormSet = modelformset_factory(
+    existing_matches = import_log.relationalmatch_set.filter(field_name__in=field_names)
+    
+    MatchRelationFormSet = inlineformset_factory(
+        ImportLog,
         RelationalMatch,
         form=MatchRelationForm, extra=0)
-    if request.POST:
-        formset = MatchRelationFormSet(request.POST)
+    
+    if request.method == 'POST':
+        formset = MatchRelationFormSet(request.POST, instance=import_log)
+        
         if formset.is_valid():
             formset.save()
-            get = ''
+            
+            url = reverse('simple_import-do_import',
+                kwargs={'import_log_id': import_log.id})
+            
             if 'commit' in request.POST:
-                get = "?commit=True"
-            return HttpResponseRedirect(reverse(
-                do_import,
-                kwargs={'import_log_id': import_log.id}) + get)
+                url += "?commit=True"
+            
+            return HttpResponseRedirect(url)
     else:
-        formset = MatchRelationFormSet(queryset=existing_matches)
+        formset = MatchRelationFormSet(instance=import_log)
     
     for i, form in enumerate(formset.forms):
         choices = choice_set[i]
         form.fields['related_field_name'].widget = forms.Select(choices=choices)
-        
+    
     return render_to_response(
         'simple_import/match_relations.html',
         {'formset': formset,
@@ -396,7 +411,7 @@ def do_import(request, import_log_id):
                 fail_count += 1
             except ValueError:
                 exc = sys.exc_info()
-                if str(exc[1]).startswith('invalid literal for int() with base 10'):
+                if unicode(exc[1]).startswith('invalid literal for int() with base 10'):
                     error_data += [row + ["Incompatible Data - A number was expected, but a character was used", smart_text(exc[1])]] 
                 else:
                     error_data += [row + ["Value Error", smart_text(exc[1])]]
@@ -424,10 +439,8 @@ def do_import(request, import_log_id):
         for row in error_data:
             ws.append(row)
         buf = StringIO()
-        try:
-            buf.write(smart_text(save_virtual_workbook(wb)), )
-        except:
-            buf.write(str(save_virtual_workbook(wb)), )
+        # Not Python 3 compatible 
+        buf.write(unicode(save_virtual_workbook(wb)), )
         import_log.error_file.save(filename, ContentFile(buf.getvalue()))
         import_log.save()
     
@@ -448,14 +461,14 @@ def do_import(request, import_log_id):
 def start_import(request):
     """ View to create a new import record
     """
-    if request.POST:
+    if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
             import_log = form.save(commit=False)
             import_log.user = request.user
             import_log.import_setting, created = ImportSetting.objects.get_or_create(
                 user=request.user,
-                content_type=ContentType.objects.get(id=form.data['model']),
+                content_type=form.cleaned_data['model'],
             )
             import_log.save()
             return HttpResponseRedirect(reverse(match_columns, kwargs={'import_log_id': import_log.id}))
@@ -467,3 +480,4 @@ def start_import(request):
             Q(permission__user=request.user, permission__codename__startswith="change_")).distinct()
     
     return render_to_response('simple_import/import.html', {'form':form,}, RequestContext(request, {}),)
+
