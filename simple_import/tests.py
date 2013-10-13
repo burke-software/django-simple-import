@@ -21,11 +21,11 @@ class SimpleTest(TestCase):
         )
         with open(self.absolute_path) as fp:
             self.import_log = ImportLog.objects.create(
-                name='test',
+                name=u'test',
                 user=user,
                 import_file = File(fp),
                 import_setting = self.import_setting,
-                import_type = 'N',
+                import_type = u'N',
             )   
         
     def test_import(self):

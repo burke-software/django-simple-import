@@ -16,6 +16,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 import sys
 from django.db.models.fields import AutoField
+from django.utils.encoding import smart_text
 
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
@@ -79,6 +80,7 @@ def match_columns(request, import_log_id):
     field_names = model_class._meta.get_all_field_names()
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        # We can't add a new AutoField and specify it's value
         if import_log.import_type == "N" and isinstance(field_object, AutoField):
             field_names.remove(field_name)
         
@@ -252,7 +254,7 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
                 setattr(new_object, header_row_field_name, cell)
             elif cell in verbose_values:
                 for choice in field.choices:
-                    if unicode(cell) == unicode(choice[1]):
+                    if smart_text(cell) == smart_text(choice[1]):
                         setattr(new_object, header_row_field_name, choice[0])
         else:
             setattr(new_object, header_row_field_name, cell)
@@ -314,7 +316,7 @@ def do_import(request, import_log_id):
         if key_column_name == cell.lower():
             key_index = i
     
-    with transaction.commit_manually():
+    if True: #transaction.commit_manually():
         for row in import_data:
             try:
                 is_created = True
@@ -367,7 +369,7 @@ def do_import(request, import_log_id):
                         user_id         = request.user.pk, 
                         content_type_id = ContentType.objects.get_for_model(new_object).pk,
                         object_id       = new_object.pk,
-                        object_repr     = unicode(new_object), 
+                        object_repr     = smart_text(new_object), 
                         action_flag     = ADDITION
                     )
                     create_count += 1
@@ -376,7 +378,7 @@ def do_import(request, import_log_id):
                         user_id         = request.user.pk, 
                         content_type_id = ContentType.objects.get_for_model(new_object).pk,
                         object_id       = new_object.pk,
-                        object_repr     = unicode(new_object), 
+                        object_repr     = smart_text(new_object), 
                         action_flag     = CHANGE
                     )
                     update_count += 1
@@ -386,31 +388,31 @@ def do_import(request, import_log_id):
                     content_type = import_log.import_setting.content_type)
             except IntegrityError:
                 exc = sys.exc_info()
-                error_data += [row + ["Integrity Error", unicode(exc[1][1])]]
+                error_data += [row + ["Integrity Error", smart_text(exc[1][1])]]
                 fail_count += 1
             except ObjectDoesNotExist:
                 exc = sys.exc_info()
-                error_data += [row + ["No Record Found to Update", unicode(exc[1])]]
+                error_data += [row + ["No Record Found to Update", smart_text(exc[1])]]
                 fail_count += 1
             except ValueError:
                 exc = sys.exc_info()
                 if str(exc[1]).startswith('invalid literal for int() with base 10'):
-                    error_data += [row + ["Incompatible Data - A number was expected, but a character was used", unicode(exc[1])]] 
+                    error_data += [row + ["Incompatible Data - A number was expected, but a character was used", smart_text(exc[1])]] 
                 else:
-                    error_data += [row + ["Value Error", unicode(exc[1])]]
+                    error_data += [row + ["Value Error", smart_text(exc[1])]]
                 fail_count += 1
             except:
                 exc = sys.exc_info()
-                error_data += [row + ["Unknown Error", unicode(exc[1])]]
+                error_data += [row + ["Unknown Error", smart_text(exc[1])]]
                 fail_count += 1
         if commit:
             transaction.commit()
         else:
-            transaction.rollback()
+            pass#transaction.rollback()
     
             
     if fail_count:
-        import cStringIO as StringIO
+        from io import StringIO
         from django.core.files.base import ContentFile
         from openpyxl.workbook import Workbook
         from openpyxl.writer.excel import save_virtual_workbook
@@ -421,8 +423,11 @@ def do_import(request, import_log_id):
         filename = 'Errors.xlsx'
         for row in error_data:
             ws.append(row)
-        buf = StringIO.StringIO()
-        buf.write(save_virtual_workbook(wb))
+        buf = StringIO()
+        try:
+            buf.write(smart_text(save_virtual_workbook(wb)), )
+        except:
+            buf.write(str(save_virtual_workbook(wb)), )
         import_log.error_file.save(filename, ContentFile(buf.getvalue()))
         import_log.save()
     
