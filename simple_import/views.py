@@ -316,7 +316,7 @@ def do_import(request, import_log_id):
         if key_column_name == cell.lower():
             key_index = i
     
-    if True: #transaction.commit_manually():
+    with transaction.commit_manually():
         for row in import_data:
             try:
                 is_created = True
@@ -408,7 +408,7 @@ def do_import(request, import_log_id):
         if commit:
             transaction.commit()
         else:
-            pass#transaction.rollback()
+            transaction.rollback()
     
             
     if fail_count:
