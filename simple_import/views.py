@@ -21,6 +21,9 @@ from simple_import.compat import User
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
+if sys.version_info >= (3,0):
+    unicode = str
+
 def validate_match_columns(import_log, model_class, header_row):
     """ Perform some basic pre import validation to make sure it's
     even possible the import can work
@@ -427,7 +430,7 @@ def do_import(request, import_log_id):
     
             
     if fail_count:
-        import cStringIO as StringIO
+        from io import StringIO
         from django.core.files.base import ContentFile
         from openpyxl.workbook import Workbook
         from openpyxl.writer.excel import save_virtual_workbook
@@ -438,9 +441,10 @@ def do_import(request, import_log_id):
         filename = 'Errors.xlsx'
         for row in error_data:
             ws.append(row)
-        buf = StringIO.StringIO()
-        buf.write(save_virtual_workbook(wb))
-        import_log.error_file.save(filename, ContentFile(buf.getvalue()))
+        buf = StringIO()
+        # Not Python 3 compatible 
+        #buf.write(str(save_virtual_workbook(wb)))
+        import_log.error_file.save(filename, ContentFile(save_virtual_workbook(wb)))
         import_log.save()
     
     return render_to_response(

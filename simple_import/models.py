@@ -7,6 +7,10 @@ import datetime
 
 from simple_import.compat import AUTH_USER_MODEL
 
+import sys
+if sys.version_info >= (3,0):
+    unicode = str
+
 class ImportSetting(models.Model):
     """ Save some settings per user per content type """
     user = models.ForeignKey(AUTH_USER_MODEL)
