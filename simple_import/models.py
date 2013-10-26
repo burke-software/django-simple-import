@@ -26,7 +26,7 @@ class ColumnMatch(models.Model):
     field_name = models.CharField(max_length=255, blank=True)
     import_setting = models.ForeignKey(ImportSetting)
     default_value = models.CharField(max_length=2000, blank=True)
-    null_on_empty = models.BooleanField(help_text="If cell is blank, clear out the field setting it to blank.")
+    null_on_empty = models.BooleanField(default=False, help_text="If cell is blank, clear out the field setting it to blank.")
     header_position = models.IntegerField(help_text="Annoying way to order the columns to match the header rows")
     
     class Meta:
