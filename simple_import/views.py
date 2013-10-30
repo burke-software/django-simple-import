@@ -354,7 +354,7 @@ def do_import(request, import_log_id):
                 new_object.simple_import_m2ms = {} # Need to deal with these after saving
                 for i, cell in enumerate(row):
                     if header_row_field_names[i]: # skip blank
-                        if cell or header_row_null_on_empty[i]:
+                        if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
                             set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
                         elif header_row_default[i]:
                             set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
@@ -362,14 +362,14 @@ def do_import(request, import_log_id):
 
                 for i, cell in enumerate(row):
                     if header_row_field_names[i]: # skip blank
-                        if cell or header_row_null_on_empty[i]:
+                        if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
                             set_method_from_cell(import_log, new_object, header_row_field_names[i], cell)
                         elif header_row_default[i]:
                             set_method_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
 
                 for i, cell in enumerate(row):
                     if header_row_field_names[i]: # skip blank
-                        if cell or header_row_null_on_empty[i]:
+                        if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
                             set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
                         elif header_row_default[i]:
                             set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
