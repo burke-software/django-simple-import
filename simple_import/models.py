@@ -3,6 +3,7 @@ from django.contrib.contenttypes import generic
 from django.db import models
 from django.conf import settings
 from django.db import transaction
+from django.utils.encoding import smart_text
 import datetime
 
 from simple_import.compat import AUTH_USER_MODEL
@@ -34,7 +35,7 @@ class ColumnMatch(models.Model):
     
     def __unicode__(self):
         return unicode('{0} {1}'.format(self.column_name, self.field_name))
-    
+
     def guess_field(self):
         """ Guess the match based on field names
         First look for an exact field name match
@@ -91,6 +92,12 @@ class ImportLog(models.Model):
             if obj.content_object:
                 obj.content_object.delete()
             obj.delete()
+
+    @staticmethod
+    def is_empty(value):
+        """ Check `value` for emptiness by first comparing with None and then
+        by coercing to string, trimming, and testing for zero length """
+        return value is None or not len(smart_text(value).strip())
     
     def get_matches(self):
         """ Get each matching header row to database match
@@ -99,7 +106,7 @@ class ImportLog(models.Model):
         match_ids = []
         
         for i, cell in enumerate(header_row):
-            if not cell: # Sometimes we get blank headers, ignore them.
+            if self.is_empty(cell): # Sometimes we get blank headers, ignore them.
                 continue
             
             try:
@@ -171,7 +178,7 @@ class ImportLog(models.Model):
             # Remove blank columns that ods files seems to have
             blank_columns = []
             for i, header_cell in enumerate(table[1][0]):
-                if header_cell == "":
+                if self.is_empty(header_cell):
                     blank_columns += [i]
             # just an overly complicated way to remove these
             # indexes from a list
@@ -186,7 +193,7 @@ class ImportLog(models.Model):
         # Remove blank columns. We use the header row as a unique index. Can't handle blanks.
         columns_to_del = []
         for i, header_cell in enumerate(data[0]):
-            if not header_cell:
+            if self.is_empty(header_cell):
                 columns_to_del += [i]
         num_deleted = 0
         for column_to_del in columns_to_del:
