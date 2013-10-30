@@ -75,7 +75,7 @@ def match_columns(request, import_log_id):
         raise SuspiciousOperation("Non superuser attempting to view other users import")
     
     # need to generate matches if they don't exist already
-    import_log.get_matches()
+    existing_matches = import_log.get_matches()
     
     MatchFormSet = inlineformset_factory(ImportSetting, ColumnMatch, form=MatchForm, extra=0)
     
@@ -129,7 +129,7 @@ def match_columns(request, import_log_id):
                     match_relations,
                     kwargs={'import_log_id': import_log.id}))
     else:
-        formset = MatchFormSet(instance=import_log.import_setting)
+        formset = MatchFormSet(instance=import_log.import_setting, queryset=existing_matches)
     
     field_choices = (('', 'Do Not Use'),)
     for field_name in field_names:
