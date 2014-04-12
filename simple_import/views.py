@@ -366,14 +366,10 @@ def do_import(request, import_log_id):
                             set_method_from_cell(import_log, new_object, header_row_field_names[i], cell)
                         elif header_row_default[i]:
                             set_method_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
+                # set_custom_value() calls save() on its own, but the same cannot be assumed
+                # for other methods, e.g. set_password()
+                new_object.save()
 
-                for i, cell in enumerate(row):
-                    if header_row_field_names[i]: # skip blank
-                        if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
-                            set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
-                        elif header_row_default[i]:
-                            set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
-                
                 for key in new_object.simple_import_m2ms.keys():
                     value = new_object.simple_import_m2ms[key]
                     m2m = getattr(new_object, key)
