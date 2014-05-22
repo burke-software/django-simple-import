@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils.encoding import smart_text
 import datetime
 
-from simple_import.compat import AUTH_USER_MODEL
+AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 import sys
 if sys.version_info >= (3,0):
