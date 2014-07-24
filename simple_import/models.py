@@ -166,7 +166,7 @@ class ImportLog(models.Model):
             for row in sheet.iter_rows():
                 data_row = []
                 for cell in row:
-                    data_row += [cell.internal_value]
+                    data_row += [cell.value]
                 data += [data_row]
                 if only_header:
                     break
