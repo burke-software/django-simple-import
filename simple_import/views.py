@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
@@ -11,7 +12,7 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.template import RequestContext
 import sys
 from django.db.models.fields import AutoField
@@ -82,7 +83,12 @@ def match_columns(request, import_log_id):
     
     import_data = import_log.get_import_file_as_list()
     header_row = [x.lower() for x in import_data[0]] # make all lower 
-    sample_row = import_data[1]
+    try:
+        sample_row = import_data[1]
+    except IndexError:
+        messages.error(request, 'Error: Spreadsheet was empty.')
+        return redirect('simple_import-start_import')
+       
     errors = []
     
     model_class = import_log.import_setting.content_type.model_class()
