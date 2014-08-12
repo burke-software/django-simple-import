@@ -21,6 +21,7 @@ from simple_import.compat import User
 from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
+
 if sys.version_info >= (3,0):
     unicode = str
 
@@ -213,7 +214,11 @@ def match_relations(request, import_log_id):
                 
                 field_names.append(field_name)
                 choices = ()
-                for field in get_direct_fields_from_model(field.related.parent_model()):
+                if hasattr(field, 'related'):
+                    parent_model = field.related.parent_model()
+                else:
+                    parent_model = field.parent_model()
+                for field in get_direct_fields_from_model(parent_model):
                     if field.unique:
                         choices += ((field.name, unicode(field.verbose_name)),)
                 choice_set += [choices]
