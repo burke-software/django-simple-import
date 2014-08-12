@@ -6,7 +6,7 @@ and user preferences in the database.
 
 Project is now stable and feature complete. Of course it's always a good idea to test before deploying.
 
-[Support development on gittip](www.gittip.com/bufke)
+[Support development on gittip](http://www.gittip.com/bufke)
 
 [![Build Status](https://travis-ci.org/burke-software/django-simple-import.png?branch=master)](https://travis-ci.org/burke-software/django-simple-import)
 
