@@ -26,23 +26,23 @@ class SimpleTest(TestCase):
                 import_file = File(fp),
                 import_setting = self.import_setting,
                 import_type = u'N',
-            )   
-        
+            )
+
     def test_import(self):
         """ Make sure we can upload the file and match columns """
         import_log_ct_id = ContentType.objects.get_for_model(ImportLog).id
-        
+
         self.assertEqual(ImportLog.objects.count(), 1)
-        
+
         with open(self.absolute_path) as fp:
             response = self.client.post(reverse('simple_import-start_import'), {
                 'name': 'This is a test',
                 'import_file': fp,
                 'import_type': "N",
                 'model': import_log_ct_id}, follow=True)
-        
+
         self.assertEqual(ImportLog.objects.count(), 2)
-        
+
         self.assertRedirects(response, reverse('simple_import-match_columns', kwargs={'import_log_id': ImportLog.objects.all()[1].id}))
         self.assertContains(response, '<h1>Match Columns</h1>')
         # Check matching
@@ -52,11 +52,11 @@ class SimpleTest(TestCase):
         self.assertContains(response, '<option value="import_setting">import setting (Required) (Related)</option>')
         # Check Sample Data
         self.assertContains(response, '/tmp/foo.xls')
-    
+
     def test_match_columns(self):
         """ Test matching columns view  """
         self.assertEqual(ColumnMatch.objects.count(), 0)
-        
+
         response = self.client.post(
             reverse('simple_import-match_columns', kwargs={'import_log_id': self.import_log.id}), {
             'columnmatch_set-TOTAL_FORMS':6,
@@ -87,15 +87,15 @@ class SimpleTest(TestCase):
             'columnmatch_set-5-import_setting':self.import_setting.id,
             'columnmatch_set-5-field_name':'import_type',
         }, follow=True)
-        
+
         self.assertRedirects(response, reverse('simple_import-match_relations', kwargs={'import_log_id': self.import_log.id}))
         self.assertContains(response, '<h1>Match Relations and Prepare to Run Import</h1>')
         self.assertEqual(ColumnMatch.objects.count(), 6)
-    
+
     def test_match_relations(self):
         """ Test matching relations view  """
         self.assertEqual(RelationalMatch.objects.count(), 0)
-        
+
         response = self.client.post(
             reverse('simple_import-match_relations', kwargs={'import_log_id': self.import_log.id}), {
             'relationalmatch_set-TOTAL_FORMS':2,
@@ -113,6 +113,6 @@ class SimpleTest(TestCase):
 
         self.assertRedirects(response, reverse('simple_import-do_import', kwargs={'import_log_id': self.import_log.id}))
         self.assertContains(response, '<h1>Import Results</h1>')
-        
+
         self.assertEqual(RelationalMatch.objects.count(), 2)
 

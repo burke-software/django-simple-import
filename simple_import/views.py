@@ -15,7 +15,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.template import RequestContext
 import sys
-from django.db.models.fields import AutoField
+from django.db.models.fields import AutoField, BooleanField
 from django.utils.encoding import smart_text
 
 from simple_import.compat import User
@@ -39,7 +39,7 @@ def validate_match_columns(import_log, model_class, header_row):
         # Skip if update only and skip ptr which suggests it's a django inherited field
         # Also some hard coded ones for Django Auth
         if import_log.import_type != "O" and field_name[-3:] != "ptr" and \
-            not field_name in ['password', 'date_joined', 'last_login']: 
+            not field_name in ['password', 'date_joined', 'last_login']:
             if (direct and model and not field_object.blank) or (not getattr(field_object, "blank", True)):
                 field_matches = column_matches.filter(field_name=field_name)
                 match_in_header = False
@@ -72,25 +72,25 @@ def match_columns(request, import_log_id):
     """ View to match import spreadsheet columns with database fields
     """
     import_log = get_object_or_404(ImportLog, id=import_log_id)
-    
+
     if not request.user.is_superuser and import_log.user != request.user:
         raise SuspiciousOperation("Non superuser attempting to view other users import")
-    
+
     # need to generate matches if they don't exist already
     existing_matches = import_log.get_matches()
-    
+
     MatchFormSet = inlineformset_factory(ImportSetting, ColumnMatch, form=MatchForm, extra=0)
-    
+
     import_data = import_log.get_import_file_as_list()
-    header_row = [x.lower() for x in import_data[0]] # make all lower 
+    header_row = [x.lower() for x in import_data[0]] # make all lower
     try:
         sample_row = import_data[1]
     except IndexError:
         messages.error(request, 'Error: Spreadsheet was empty.')
         return redirect('simple_import-start_import')
-       
+
     errors = []
-    
+
     model_class = import_log.import_setting.content_type.model_class()
     field_names = model_class._meta.get_all_field_names()
     for field_name in field_names:
@@ -98,19 +98,19 @@ def match_columns(request, import_log_id):
         # We can't add a new AutoField and specify it's value
         if import_log.import_type == "N" and isinstance(field_object, AutoField):
             field_names.remove(field_name)
-        
+
     if request.method == 'POST':
         formset = MatchFormSet(request.POST, instance=import_log.import_setting)
         if formset.is_valid():
             formset.save()
             if import_log.import_type in ["U", "O"]:
                 update_key = request.POST.get('update_key', '')
-                
+
                 if update_key:
                     field_name = import_log.import_setting.columnmatch_set.get(column_name=update_key).field_name
                     if field_name:
                         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-                        
+
                         if direct and field_object.unique:
                             import_log.update_key = update_key
                             import_log.save()
@@ -124,7 +124,7 @@ def match_columns(request, import_log_id):
                 import_log,
                 model_class,
                 header_row)
-            
+
             all_field_names = []
             for clean_data in formset.cleaned_data:
                 if clean_data['field_name']:
@@ -137,17 +137,17 @@ def match_columns(request, import_log_id):
                     kwargs={'import_log_id': import_log.id}))
     else:
         formset = MatchFormSet(instance=import_log.import_setting, queryset=existing_matches)
-    
+
     field_choices = (('', 'Do Not Use'),)
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
         add = True
-        
+
         if direct:
             field_verbose = field_object.verbose_name
         else:
             field_verbose = field_name
-        
+
         if direct and  not field_object.blank:
             field_verbose += " (Required)"
         if direct and field_object.unique:
@@ -156,10 +156,10 @@ def match_columns(request, import_log_id):
             field_verbose += " (Related)"
         elif not direct:
             add = False
-        
+
         if add:
             field_choices += ((field_name, field_verbose),)
-    
+
     # Include django-custom-field support
     custom_fields = get_custom_fields_from_model(model_class)
     if custom_fields:
@@ -175,12 +175,12 @@ def match_columns(request, import_log_id):
     # User model should allow set password
     if issubclass(model_class, User):
         field_choices += (("simple_import_method__{0}".format('set_password'),
-                               "Set Password (Method)"),) 
-    
+                               "Set Password (Method)"),)
+
     for i, form in enumerate(formset):
         form.fields['field_name'].widget = forms.Select(choices=(field_choices))
         form.sample = sample_row[i]
-    
+
     return render_to_response(
         'simple_import/match_columns.html',
         {'import_log': import_log, 'formset': formset, 'errors': errors},
@@ -205,19 +205,19 @@ def match_relations(request, import_log_id):
     matches = import_log.get_matches()
     field_names = []
     choice_set = []
-    
+
     for match in matches.exclude(field_name=""):
         field_name = match.field_name
-        
+
         if not field_name.startswith('simple_import_custom__') and \
                 not field_name.startswith('simple_import_method__'):
             field, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-            
-            if m2m or isinstance(field, ForeignKey): 
+
+            if m2m or isinstance(field, ForeignKey):
                 RelationalMatch.objects.get_or_create(
                     import_log=import_log,
                     field_name=field_name)
-                
+
                 field_names.append(field_name)
                 choices = ()
                 if hasattr(field, 'related'):
@@ -228,34 +228,34 @@ def match_relations(request, import_log_id):
                     if field.unique:
                         choices += ((field.name, unicode(field.verbose_name)),)
                 choice_set += [choices]
-    
+
     existing_matches = import_log.relationalmatch_set.filter(field_name__in=field_names)
-    
+
     MatchRelationFormSet = inlineformset_factory(
         ImportLog,
         RelationalMatch,
         form=MatchRelationForm, extra=0)
-    
+
     if request.method == 'POST':
         formset = MatchRelationFormSet(request.POST, instance=import_log)
-        
+
         if formset.is_valid():
             formset.save()
-            
+
             url = reverse('simple_import-do_import',
                 kwargs={'import_log_id': import_log.id})
-            
+
             if 'commit' in request.POST:
                 url += "?commit=True"
-            
+
             return HttpResponseRedirect(url)
     else:
         formset = MatchRelationFormSet(instance=import_log)
-    
+
     for i, form in enumerate(formset.forms):
         choices = choice_set[i]
         form.fields['related_field_name'].widget = forms.Select(choices=choices)
-    
+
     return render_to_response(
         'simple_import/match_relations.html',
         {'formset': formset,
@@ -285,10 +285,16 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
                 for choice in field.choices:
                     if smart_text(cell) == smart_text(choice[1]):
                         setattr(new_object, header_row_field_name, choice[0])
+        elif isinstance(field, BooleanField):
+            # Some formats/libraries report booleans as strings
+            if cell == False or cell == "FALSE":
+                setattr(new_object, header_row_field_name, False)
+            else:
+                setattr(new_object, header_row_field_name, cell)
         else:
             setattr(new_object, header_row_field_name, cell)
-    
-    
+
+
 def set_method_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Run a method from a import cell.
     """
@@ -299,7 +305,7 @@ def set_method_from_cell(import_log, new_object, header_row_field_name, cell):
         new_object.set_custom_value(header_row_field_name[22:], cell)
     elif header_row_field_name.startswith('simple_import_method__'):
         getattr(new_object, header_row_field_name[22:])(cell)
-       
+
 
 @staff_member_required
 def do_import(request, import_log_id):
@@ -311,12 +317,12 @@ def do_import(request, import_log_id):
         return HttpResponseRedirect(reverse(
                     do_import,
                     kwargs={'import_log_id': import_log.id}) + '?success_undo=True')
-    
+
     if 'success_undo' in request.GET and request.GET['success_undo'] == "True":
         success_undo = True
     else:
         success_undo = False
-    
+
     model_class = import_log.import_setting.content_type.model_class()
     import_data = import_log.get_import_file_as_list()
     header_row = import_data.pop(0)
@@ -331,7 +337,7 @@ def do_import(request, import_log_id):
         commit = True
     else:
         commit = False
-    
+
     key_column_name = None
     if import_log.update_key and import_log.import_type in ["U", "O"]:
         key_match = import_log.import_setting.columnmatch_set.get(column_name=import_log.update_key)
@@ -342,9 +348,9 @@ def do_import(request, import_log_id):
         header_row_field_names += [match.field_name]
         header_row_default += [match.default_value]
         header_row_null_on_empty += [match.null_on_empty]
-        if key_column_name.lower() == cell.lower():
+        if key_column_name != None and key_column_name.lower() == cell.lower():
             key_index = i
-    
+
     with transaction.commit_manually():
         for row in import_data:
             try:
@@ -388,22 +394,22 @@ def do_import(request, import_log_id):
                     related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=key).related_field_name
                     m2m_object = m2m_model.objects.get(**{related_field_name:value})
                     m2m.add(m2m_object)
-                
+
                 if is_created:
                     LogEntry.objects.log_action(
-                        user_id         = request.user.pk, 
+                        user_id         = request.user.pk,
                         content_type_id = ContentType.objects.get_for_model(new_object).pk,
                         object_id       = new_object.pk,
-                        object_repr     = smart_text(new_object), 
+                        object_repr     = smart_text(new_object),
                         action_flag     = ADDITION
                     )
                     create_count += 1
                 else:
                     LogEntry.objects.log_action(
-                        user_id         = request.user.pk, 
+                        user_id         = request.user.pk,
                         content_type_id = ContentType.objects.get_for_model(new_object).pk,
                         object_id       = new_object.pk,
-                        object_repr     = smart_text(new_object), 
+                        object_repr     = smart_text(new_object),
                         action_flag     = CHANGE
                     )
                     update_count += 1
@@ -422,7 +428,7 @@ def do_import(request, import_log_id):
             except ValueError:
                 exc = sys.exc_info()
                 if unicode(exc[1]).startswith('invalid literal for int() with base 10'):
-                    error_data += [row + ["Incompatible Data - A number was expected, but a character was used", smart_text(exc[1])]] 
+                    error_data += [row + ["Incompatible Data - A number was expected, but a character was used", smart_text(exc[1])]]
                 else:
                     error_data += [row + ["Value Error", smart_text(exc[1])]]
                 fail_count += 1
@@ -434,14 +440,14 @@ def do_import(request, import_log_id):
             transaction.commit()
         else:
             transaction.rollback()
-    
-            
+
+
     if fail_count:
         from io import StringIO
         from django.core.files.base import ContentFile
         from openpyxl.workbook import Workbook
         from openpyxl.writer.excel import save_virtual_workbook
-        
+
         wb = Workbook()
         ws = wb.worksheets[0]
         ws.title = "Errors"
@@ -449,11 +455,11 @@ def do_import(request, import_log_id):
         for row in error_data:
             ws.append(row)
         buf = StringIO()
-        # Not Python 3 compatible 
+        # Not Python 3 compatible
         #buf.write(str(save_virtual_workbook(wb)))
         import_log.error_file.save(filename, ContentFile(save_virtual_workbook(wb)))
         import_log.save()
-    
+
     return render_to_response(
         'simple_import/do_import.html',
         {
@@ -488,6 +494,6 @@ def start_import(request):
         form.fields["model"].queryset = ContentType.objects.filter(
             Q(permission__group__user=request.user, permission__codename__startswith="change_") |
             Q(permission__user=request.user, permission__codename__startswith="change_")).distinct()
-    
+
     return render_to_response('simple_import/import.html', {'form':form,}, RequestContext(request, {}),)
 
