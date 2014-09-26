@@ -419,7 +419,7 @@ def do_import(request, import_log_id):
                     content_type = import_log.import_setting.content_type)
             except IntegrityError:
                 exc = sys.exc_info()
-                error_data += [row + ["Integrity Error", smart_text(exc[1][1])]]
+                error_data += [row + ["Integrity Error", smart_text(exc[1])]]
                 fail_count += 1
             except ObjectDoesNotExist:
                 exc = sys.exc_info()
