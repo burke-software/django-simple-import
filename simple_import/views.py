@@ -351,72 +351,73 @@ def do_import(request, import_log_id):
         if key_column_name != None and key_column_name.lower() == cell.lower():
             key_index = i
 
-    with transaction.commit_manually():
+    with transaction.atomic():
         for row in import_data:
             try:
-                is_created = True
-                if import_log.import_type == "N":
-                    new_object = model_class()
-                elif import_log.import_type == "O":
-                    filters = {key_field_name: row[key_index]}
-                    new_object = model_class.objects.get(**filters)
-                    is_created = False
-                elif import_log.import_type == "U":
-                    filters = {key_field_name: row[key_index]}
-                    try:
+                with transaction.atomic():
+                    is_created = True
+                    if import_log.import_type == "N":
+                        new_object = model_class()
+                    elif import_log.import_type == "O":
+                        filters = {key_field_name: row[key_index]}
                         new_object = model_class.objects.get(**filters)
                         is_created = False
-                    except model_class.DoesNotExist:
-                        new_object = model_class()
-                new_object.simple_import_m2ms = {} # Need to deal with these after saving
-                for i, cell in enumerate(row):
-                    if header_row_field_names[i]: # skip blank
-                        if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
-                            set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
-                        elif header_row_default[i]:
-                            set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
-                new_object.save()
+                    elif import_log.import_type == "U":
+                        filters = {key_field_name: row[key_index]}
+                        new_object = model_class.objects.filter(**filters).first()
+                        if new_object == None:
+                            new_object = model_class()
+                            is_created = False
 
-                for i, cell in enumerate(row):
-                    if header_row_field_names[i]: # skip blank
-                        if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
-                            set_method_from_cell(import_log, new_object, header_row_field_names[i], cell)
-                        elif header_row_default[i]:
-                            set_method_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
-                # set_custom_value() calls save() on its own, but the same cannot be assumed
-                # for other methods, e.g. set_password()
-                new_object.save()
+                    new_object.simple_import_m2ms = {} # Need to deal with these after saving
+                    for i, cell in enumerate(row):
+                        if header_row_field_names[i]: # skip blank
+                            if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
+                                set_field_from_cell(import_log, new_object, header_row_field_names[i], cell)
+                            elif header_row_default[i]:
+                                set_field_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
+                    new_object.save()
 
-                for key in new_object.simple_import_m2ms.keys():
-                    value = new_object.simple_import_m2ms[key]
-                    m2m = getattr(new_object, key)
-                    m2m_model = type(m2m.model())
-                    related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=key).related_field_name
-                    m2m_object = m2m_model.objects.get(**{related_field_name:value})
-                    m2m.add(m2m_object)
+                    for i, cell in enumerate(row):
+                        if header_row_field_names[i]: # skip blank
+                            if not import_log.is_empty(cell) or header_row_null_on_empty[i]:
+                                set_method_from_cell(import_log, new_object, header_row_field_names[i], cell)
+                            elif header_row_default[i]:
+                                set_method_from_cell(import_log, new_object, header_row_field_names[i], header_row_default[i])
+                    # set_custom_value() calls save() on its own, but the same cannot be assumed
+                    # for other methods, e.g. set_password()
+                    new_object.save()
 
-                if is_created:
-                    LogEntry.objects.log_action(
-                        user_id         = request.user.pk,
-                        content_type_id = ContentType.objects.get_for_model(new_object).pk,
-                        object_id       = new_object.pk,
-                        object_repr     = smart_text(new_object),
-                        action_flag     = ADDITION
-                    )
-                    create_count += 1
-                else:
-                    LogEntry.objects.log_action(
-                        user_id         = request.user.pk,
-                        content_type_id = ContentType.objects.get_for_model(new_object).pk,
-                        object_id       = new_object.pk,
-                        object_repr     = smart_text(new_object),
-                        action_flag     = CHANGE
-                    )
-                    update_count += 1
-                ImportedObject.objects.create(
-                    import_log = import_log,
-                    object_id = new_object.pk,
-                    content_type = import_log.import_setting.content_type)
+                    for key in new_object.simple_import_m2ms.keys():
+                        value = new_object.simple_import_m2ms[key]
+                        m2m = getattr(new_object, key)
+                        m2m_model = type(m2m.model())
+                        related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=key).related_field_name
+                        m2m_object = m2m_model.objects.get(**{related_field_name:value})
+                        m2m.add(m2m_object)
+
+                    if is_created:
+                        LogEntry.objects.log_action(
+                            user_id         = request.user.pk,
+                            content_type_id = ContentType.objects.get_for_model(new_object).pk,
+                            object_id       = new_object.pk,
+                            object_repr     = smart_text(new_object),
+                            action_flag     = ADDITION
+                        )
+                        create_count += 1
+                    else:
+                        LogEntry.objects.log_action(
+                            user_id         = request.user.pk,
+                            content_type_id = ContentType.objects.get_for_model(new_object).pk,
+                            object_id       = new_object.pk,
+                            object_repr     = smart_text(new_object),
+                            action_flag     = CHANGE
+                        )
+                        update_count += 1
+                    ImportedObject.objects.create(
+                        import_log = import_log,
+                        object_id = new_object.pk,
+                        content_type = import_log.import_setting.content_type)
             except IntegrityError:
                 exc = sys.exc_info()
                 error_data += [row + ["Integrity Error", smart_text(exc[1])]]
@@ -433,13 +434,11 @@ def do_import(request, import_log_id):
                     error_data += [row + ["Value Error", smart_text(exc[1])]]
                 fail_count += 1
             except:
-                exc = sys.exc_info()
-                error_data += [row + ["Unknown Error", smart_text(exc[1])]]
+                error_data += [row + ["Unknown Error"]]
                 fail_count += 1
-        if commit:
-            transaction.commit()
-        else:
-            transaction.rollback()
+        if not commit:
+            from django.db import connection
+            connection._rollback()
 
 
     if fail_count:
