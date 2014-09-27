@@ -26,6 +26,14 @@ from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 if sys.version_info >= (3,0):
     unicode = str
 
+def is_foreign_key_id_name(field_name, field_object):
+    """ Determines if field name is a ForeignKey
+    ending in "_id"
+    Used to find FK duplicates in _meta.get_all_field_names
+    """
+    if field_name[-3:] == "_id" and isinstance(field_object, ForeignKey):
+        return True
+
 def validate_match_columns(import_log, model_class, header_row):
     """ Perform some basic pre import validation to make sure it's
     even possible the import can work
@@ -38,8 +46,10 @@ def validate_match_columns(import_log, model_class, header_row):
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
         # Skip if update only and skip ptr which suggests it's a django inherited field
         # Also some hard coded ones for Django Auth
-        if import_log.import_type != "O" and field_name[-3:] != "ptr" and \
-            not field_name in ['password', 'date_joined', 'last_login']:
+        if (import_log.import_type != "O" and 
+                field_name[-3:] != "ptr" and
+                not field_name in ['password', 'date_joined', 'last_login'] and
+                not is_foreign_key_id_name(field_name, field_object)):
             if (direct and model and not field_object.blank) or (not getattr(field_object, "blank", True)):
                 field_matches = column_matches.filter(field_name=field_name)
                 match_in_header = False
@@ -155,6 +165,8 @@ def match_columns(request, import_log_id):
         if m2m or isinstance(field_object, ForeignKey):
             field_verbose += " (Related)"
         elif not direct:
+            add = False
+        if is_foreign_key_id_name(field_name, field_object):
             add = False
 
         if add:
