@@ -7,8 +7,7 @@ from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.db.models import Q, ForeignKey
-from django.db import transaction
-from django.db import IntegrityError
+from django.db import transaction, IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
@@ -19,12 +18,14 @@ from django.db.models.fields import AutoField, BooleanField
 from django.utils.encoding import smart_text
 
 from simple_import.compat import User
-from simple_import.models import ImportLog, ImportSetting, ColumnMatch, ImportedObject, RelationalMatch
+from simple_import.models import (ImportLog, ImportSetting, ColumnMatch,
+                                  ImportedObject, RelationalMatch)
 from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
 
 
-if sys.version_info >= (3,0):
+if sys.version_info >= (3, 0):
     unicode = str
+
 
 def is_foreign_key_id_name(field_name, field_object):
     """ Determines if field name is a ForeignKey
@@ -33,6 +34,7 @@ def is_foreign_key_id_name(field_name, field_object):
     """
     if field_name[-3:] == "_id" and isinstance(field_object, ForeignKey):
         return True
+
 
 def validate_match_columns(import_log, model_class, header_row):
     """ Perform some basic pre import validation to make sure it's
@@ -44,13 +46,14 @@ def validate_match_columns(import_log, model_class, header_row):
     field_names = model_class._meta.get_all_field_names()
     for field_name in field_names:
         field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
-        # Skip if update only and skip ptr which suggests it's a django inherited field
-        # Also some hard coded ones for Django Auth
-        if (import_log.import_type != "O" and 
+        # Skip if update only and skip ptr which suggests it's a django
+        # inherited field. Also some hard coded ones for Django Auth
+        if (import_log.import_type != "O" and
                 field_name[-3:] != "ptr" and
-                not field_name in ['password', 'date_joined', 'last_login'] and
+                field_name not in ['password', 'date_joined', 'last_login'] and
                 not is_foreign_key_id_name(field_name, field_object)):
-            if (direct and model and not field_object.blank) or (not getattr(field_object, "blank", True)):
+            if ((direct and model and not field_object.blank) or
+                    (not getattr(field_object, "blank", True))):
                 field_matches = column_matches.filter(field_name=field_name)
                 match_in_header = False
                 if field_matches:
@@ -70,7 +73,9 @@ def get_custom_fields_from_model(model_class):
     if 'custom_field' in settings.INSTALLED_APPS:
         from custom_field.models import CustomField
         try:
-            content_type = ContentType.objects.get(model=model_class._meta.module_name,app_label=model_class._meta.app_label)
+            content_type = ContentType.objects.get(
+                model=model_class._meta.module_name,
+                app_label=model_class._meta.app_label)
         except ContentType.DoesNotExist:
             content_type = None
         custom_fields = CustomField.objects.filter(content_type=content_type)
@@ -158,7 +163,7 @@ def match_columns(request, import_log_id):
         else:
             field_verbose = field_name
 
-        if direct and  not field_object.blank:
+        if direct and not field_object.blank:
             field_verbose += " (Required)"
         if direct and field_object.unique:
             field_verbose += " (Unique)"
@@ -364,6 +369,7 @@ def do_import(request, import_log_id):
             key_index = i
 
     with transaction.atomic():
+        sid = transaction.savepoint()
         for row in import_data:
             try:
                 with transaction.atomic():
@@ -449,8 +455,7 @@ def do_import(request, import_log_id):
                 error_data += [row + ["Unknown Error"]]
                 fail_count += 1
         if not commit:
-            from django.db import connection
-            connection._rollback()
+            transaction.savepoint_rollback(sid)
 
 
     if fail_count:
