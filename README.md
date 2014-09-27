@@ -14,6 +14,11 @@ Project is now stable and feature complete. Of course it's always a good idea to
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/do_import.png)
 
+# News
+
+1.17 is released. The most apparent changes are 1.7 compatibility and migration to Django's 
+atomic transactions. Please report any issues. I test against mysql innodb, postgres, and sqlite.
+
 ## Features
 - Supports csv, xls, xlsx, and ods import file
 - Save user matches of column headers to fields
