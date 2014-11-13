@@ -1,2 +1,8 @@
 *.pyc
 settings_local.py
+coverage.xml
+django_setuptest-*.egg/
+django_simple_import.egg-info/
+*.egg/
+pep8.txt
+import_file/

@@ -1,8 +1,8 @@
 django-simple-import
 ====================
 
-An import tool easy enough your users could use it. django-simple-import aims to keep track of logs 
-and user preferences in the database. 
+An import tool easy enough your users could use it. django-simple-import aims to keep track of logs
+and user preferences in the database.
 
 Project is now stable and feature complete. Of course it's always a good idea to test before deploying.
 
@@ -16,7 +16,7 @@ Project is now stable and feature complete. Of course it's always a good idea to
 
 # News
 
-1.17 is released. The most apparent changes are 1.7 compatibility and migration to Django's 
+1.17 is released. The most apparent changes are 1.7 compatibility and migration to Django's
 atomic transactions. Please report any issues. I test against mysql innodb, postgres, and sqlite.
 
 ## Features
@@ -47,7 +47,7 @@ Define allowed methods to be "imported". Example:
         def set_bar(self, value):
             self.bar = value
         simple_import_methods = ('set_bar',)
-        
+
 ### settings.py
 SIMPLE_IMPORT_LAZY_CHOICES: Default True. If enabled simple_import will look up choices when importing. Example:
 
@@ -56,13 +56,13 @@ SIMPLE_IMPORT_LAZY_CHOICES: Default True. If enabled simple_import will look up 
 If the spreadsheet value is "Monday" it will set the database value to "M."
 
 If you need any help, we do consulting and custom development. Just email us at david at burkesoftware.com.
-   
+
 
 ## Usage
 
 Go to /simple_import/start_import/ or use the admin interface.
 
-The screenshots have a django-grappelli like theme. The base templates have no style and are very basic. 
+The screenshots have a django-grappelli like theme. The base templates have no style and are very basic.
 See an example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import).
 
 There is also a log of import records. Check out /admin/simple_import/.
@@ -75,7 +75,15 @@ saving a hash.
 User has some required fields that...aren't really required. Hardcoded to let them pass.
 
 ### Security
-I'm working on the assumption staff users are trusted. Only users with change permission 
+I'm working on the assumption staff users are trusted. Only users with change permission
 to a field will see it as an option. I have not spent much time looking for ways users could
 manipulate URLs to run unauthorized imports. Feel free to contribute changes.
 All import views do require admin "is staff" permission.
+
+## Testing
+
+If you have [Fig](http://www.fig.sh/) and [Docker](https://www.docker.com/)
+installed, then just running `fig up` will do everything you need to test
+the packages.
+
+Otherwise look at the `.travis.yml` file for test dependencies.
