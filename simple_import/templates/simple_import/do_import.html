@@ -15,7 +15,7 @@
 
 {% if fail_count %}
     Failed: {{ fail_count }} <br/>
-    <a href="{{ MEDIA_URL }}{{ import_log.error_file }}">Download failed records</a>
+    <a href="{{ import_log.error_file.url }}">Download failed records</a>
 {% endif %}
 
 

@@ -16,7 +16,7 @@ class ImportSetting(models.Model):
     """ Save some settings per user per content type """
     user = models.ForeignKey(AUTH_USER_MODEL)
     content_type = models.ForeignKey(ContentType)
-    
+
     class Meta():
         unique_together = ('user', 'content_type',)
 
@@ -29,10 +29,10 @@ class ColumnMatch(models.Model):
     default_value = models.CharField(max_length=2000, blank=True)
     null_on_empty = models.BooleanField(default=False, help_text="If cell is blank, clear out the field setting it to blank.")
     header_position = models.IntegerField(help_text="Annoying way to order the columns to match the header rows")
-    
+
     class Meta:
         unique_together = ('column_name', 'import_setting')
-    
+
     def __unicode__(self):
         return unicode('{0} {1}'.format(self.column_name, self.field_name))
 
@@ -75,16 +75,16 @@ class ImportLog(models.Model):
     )
     import_type = models.CharField(max_length=1, choices=import_type_choices)
     update_key = models.CharField(max_length=200, blank=True)
-    
+
     def __unicode__(self):
         return unicode(self.name)
-    
+
     def clean(self):
         from django.core.exceptions import ValidationError
         filename = str(self.import_file).lower()
         if not filename[-3:] in ('xls', 'ods', 'csv', 'lsx'):
             raise ValidationError('Invalid file type. Must be xls, xlsx, ods, or csv.')
-    
+
     @transaction.commit_on_success
     def undo(self):
         if self.import_type != "N":
@@ -99,17 +99,17 @@ class ImportLog(models.Model):
         """ Check `value` for emptiness by first comparing with None and then
         by coercing to string, trimming, and testing for zero length """
         return value is None or not len(smart_text(value).strip())
-    
+
     def get_matches(self):
         """ Get each matching header row to database match
         Returns a ColumnMatch queryset"""
         header_row = self.get_import_file_as_list(only_header=True)
         match_ids = []
-        
+
         for i, cell in enumerate(header_row):
             if self.is_empty(cell): # Sometimes we get blank headers, ignore them.
                 continue
-            
+
             try:
                 match = ColumnMatch.objects.get(
                     import_setting = self.import_setting,
@@ -121,24 +121,24 @@ class ImportLog(models.Model):
                     column_name = cell,
                 )
                 match.guess_field()
-            
+
             match.header_position = i
             match.save()
-            
+
             match_ids += [match.id]
-        
+
         return ColumnMatch.objects.filter(pk__in=match_ids).order_by('header_position')
 
     def get_import_file_as_list(self, only_header=False):
         file_ext = str(self.import_file).lower()[-3:]
         data = []
-        
+
         self.import_file.seek(0)
-        
+
         if file_ext == "xls":
             import xlrd
             import os
-            
+
             wb = xlrd.open_workbook(file_contents=self.import_file.read())
             sh1 = wb.sheet_by_index(0)
             for rownum in range(sh1.nrows):
