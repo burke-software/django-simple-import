@@ -1,5 +1,10 @@
-<h1>Import Results</h1>
+{% extends "simple_import/base.html" %}
 
+{% block simple_import_page_title %}Import Results{% endblock %}
+
+{% block simple_import_title %}Import Results{% endblock %}
+
+{% block simple_import_form %}
 {% if success_undo %}
     <p>
         Import was undone. This is now a simulation, you can run the import again.
@@ -31,3 +36,4 @@
         This was only a simulation. <a href="?commit=True&undo=False">Click here to run the import.</a>
     </p>
 {% endif %}
+{% endblock %}

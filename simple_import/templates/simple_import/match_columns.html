@@ -1,4 +1,10 @@
-<h1>Match Columns</h1>
+{% extends "simple_import/base.html" %}
+
+{% block simple_import_page_title %}Match Colums{% endblock %}
+
+{% block simple_import_title %}Match Columns{% endblock %}
+
+{% block simple_import_form %}
 <form action="" method="post">{% csrf_token %}
     {{ formset.management_form }}
     
@@ -64,3 +70,4 @@
     
     <input type="submit" value="Next"/>
 </form>
+{% endblock %}
