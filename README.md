@@ -64,6 +64,7 @@ Go to /simple_import/start_import/ or use the admin interface.
 
 The screenshots have a django-grappelli like theme. The base templates have no style and are very basic.
 See an example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import).
+It is often sufficient to simply override `simple_import/templates/base.html`.
 
 There is also a log of import records. Check out /admin/simple_import/.
 

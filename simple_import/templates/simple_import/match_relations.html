@@ -1,4 +1,10 @@
-<h1>Match Relations and Prepare to Run Import</h1>
+{% extends "simple_import/base.html" %}
+
+{% block simple_import_page_title %}Match Relations and Prepare to Run Import{% endblock %}
+
+{% block simple_import_title %}Match Relations and Prepare to Run Import{% endblock %}
+
+{% block simple_import_form %}
 <form action="" method="post">{% csrf_token %}
     {{ formset.management_form }}
     {% if errors %}
@@ -39,3 +45,4 @@
     <input type="submit" name="simulate" value="Simulate import">
 
 </form>
+{% endblock %}
