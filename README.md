@@ -55,6 +55,9 @@ SIMPLE_IMPORT_LAZY_CHOICES: Default True. If enabled simple_import will look up 
 
 If the spreadsheet value is "Monday" it will set the database value to "M."
 
+SIMPLE_IMPORT_LAZY_CHOICES_STRIP: Default False.  If enabled, simple_import will trip leading/trailing whitespace 
+from the cell's value before checking for a match.  Only relevant when SIMPLE_IMPORT_LAZY_CHOICES is also enabled.
+ 
 If you need any help, we do consulting and custom development. Just email us at david at burkesoftware.com.
 
 
