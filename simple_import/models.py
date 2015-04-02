@@ -85,7 +85,7 @@ class ImportLog(models.Model):
         if not filename[-3:] in ('xls', 'ods', 'csv', 'lsx'):
             raise ValidationError('Invalid file type. Must be xls, xlsx, ods, or csv.')
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def undo(self):
         if self.import_type != "N":
             raise Exception("Cannot undo this type of import!")
