@@ -9,12 +9,13 @@ class ImportForm(forms.ModelForm):
         model = ImportLog
         fields = ('name', 'import_file', 'import_type')
     model = forms.ModelChoiceField(ContentType.objects.all())
-    
-    
+
+
 class MatchForm(forms.ModelForm):
     class Meta:
         model = ColumnMatch
         exclude = ['header_position']
+
 
 class MatchRelationForm(forms.ModelForm):
     class Meta:
@@ -22,3 +23,4 @@ class MatchRelationForm(forms.ModelForm):
         widgets = {
             'related_field_name': forms.Select(choices=(('', '---------'),))
         }
+        fields = "__all__"
