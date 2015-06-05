@@ -23,7 +23,6 @@ class SimpleTest(TestCase):
             content_type=ContentType.objects.get_for_model(ImportLog)
         )
         with open(self.absolute_path) as fp:
-            import pdb; pdb.set_trace()
             self.import_log = ImportLog.objects.create(
                 name='test',
                 user=user,
