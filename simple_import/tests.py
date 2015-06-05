@@ -7,25 +7,29 @@ from simple_import.compat import User
 from simple_import.models import *
 from django.core.files import File
 
+
 class SimpleTest(TestCase):
     def setUp(self):
-        user = User.objects.create_user('temporary', 'temporary@gmail.com', 'temporary')
+        user = User.objects.create_user(
+            'temporary', 'temporary@gmail.com', 'temporary')
         user.is_staff = True
         user.is_superuser = True
         user.save()
         self.client.login(username='temporary', password='temporary')
-        self.absolute_path = os.path.join(os.path.dirname(__file__), 'static', 'test_import.xls')
+        self.absolute_path = os.path.join(
+            os.path.dirname(__file__), 'static', 'test_import.xls')
         self.import_setting = ImportSetting.objects.create(
             user=user,
             content_type=ContentType.objects.get_for_model(ImportLog)
         )
         with open(self.absolute_path) as fp:
+            import pdb; pdb.set_trace()
             self.import_log = ImportLog.objects.create(
-                name=u'test',
+                name='test',
                 user=user,
-                import_file = File(fp),
-                import_setting = self.import_setting,
-                import_type = u'N',
+                import_file=File(fp),
+                import_setting=self.import_setting,
+                import_type='N',
             )
 
     def test_import(self):

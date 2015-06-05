@@ -1,16 +1,17 @@
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
-from django.db import models
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.utils.encoding import smart_text
+from django.utils.encoding import python_2_unicode_compatible
 import datetime
 
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 import sys
-if sys.version_info >= (3,0):
+if sys.version_info >= (3, 0):
     unicode = str
+
 
 class ImportSetting(models.Model):
     """ Save some settings per user per content type """
@@ -21,19 +22,23 @@ class ImportSetting(models.Model):
         unique_together = ('user', 'content_type',)
 
 
+@python_2_unicode_compatible
 class ColumnMatch(models.Model):
     """ Match column names from the user uploaded file to the database """
     column_name = models.CharField(max_length=200)
     field_name = models.CharField(max_length=255, blank=True)
     import_setting = models.ForeignKey(ImportSetting)
     default_value = models.CharField(max_length=2000, blank=True)
-    null_on_empty = models.BooleanField(default=False, help_text="If cell is blank, clear out the field setting it to blank.")
-    header_position = models.IntegerField(help_text="Annoying way to order the columns to match the header rows")
+    null_on_empty = models.BooleanField(
+        default=False,
+        help_text="If cell is blank, clear out the field setting it to blank.")
+    header_position = models.IntegerField(
+        help_text="Annoying way to order the columns to match the header rows")
 
     class Meta:
         unique_together = ('column_name', 'import_setting')
 
-    def __unicode__(self):
+    def __str__(self):
         return unicode('{0} {1}'.format(self.column_name, self.field_name))
 
     def guess_field(self):
@@ -56,14 +61,16 @@ class ColumnMatch(models.Model):
         for field_name in field_names:
             field = model._meta.get_field_by_name(field_name)[0]
             if hasattr(field, 'verbose_name'):
-                if field.verbose_name.lower().replace(' ', '_') == normalized_field_name:
+                if (field.verbose_name.lower().replace(' ', '_') == normalized_field_name):
                     self.field_name = field_name
 
 
+@python_2_unicode_compatible
 class ImportLog(models.Model):
     """ A log of all import attempts """
     name = models.CharField(max_length=255)
-    user = models.ForeignKey(AUTH_USER_MODEL, editable=False, related_name="simple_import_log")
+    user = models.ForeignKey(
+        AUTH_USER_MODEL, editable=False, related_name="simple_import_log")
     date = models.DateTimeField(auto_now_add=True, verbose_name="Date Created")
     import_file = models.FileField(upload_to="import_file")
     error_file = models.FileField(upload_to="error_file", blank=True)
@@ -76,14 +83,15 @@ class ImportLog(models.Model):
     import_type = models.CharField(max_length=1, choices=import_type_choices)
     update_key = models.CharField(max_length=200, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return unicode(self.name)
 
     def clean(self):
         from django.core.exceptions import ValidationError
         filename = str(self.import_file).lower()
         if not filename[-3:] in ('xls', 'ods', 'csv', 'lsx'):
-            raise ValidationError('Invalid file type. Must be xls, xlsx, ods, or csv.')
+            raise ValidationError(
+                'Invalid file type. Must be xls, xlsx, ods, or csv.')
 
     @transaction.atomic
     def undo(self):
@@ -107,18 +115,19 @@ class ImportLog(models.Model):
         match_ids = []
 
         for i, cell in enumerate(header_row):
-            if self.is_empty(cell): # Sometimes we get blank headers, ignore them.
+            # Sometimes we get blank headers, ignore them.
+            if self.is_empty(cell):
                 continue
 
             try:
                 match = ColumnMatch.objects.get(
-                    import_setting = self.import_setting,
-                    column_name = cell,
+                    import_setting=self.import_setting,
+                    column_name=cell,
                 )
             except ColumnMatch.DoesNotExist:
                 match = ColumnMatch(
-                    import_setting = self.import_setting,
-                    column_name = cell,
+                    import_setting=self.import_setting,
+                    column_name=cell,
                 )
                 match.guess_field()
 
@@ -127,7 +136,8 @@ class ImportLog(models.Model):
 
             match_ids += [match.id]
 
-        return ColumnMatch.objects.filter(pk__in=match_ids).order_by('header_position')
+        return ColumnMatch.objects.filter(
+            pk__in=match_ids).order_by('header_position')
 
     def get_import_file_as_list(self, only_header=False):
         file_ext = str(self.import_file).lower()[-3:]
@@ -137,7 +147,6 @@ class ImportLog(models.Model):
 
         if file_ext == "xls":
             import xlrd
-            import os
 
             wb = xlrd.open_workbook(file_contents=self.import_file.read())
             sh1 = wb.sheet_by_index(0)
@@ -145,7 +154,9 @@ class ImportLog(models.Model):
                 row_values = []
                 for cell in sh1.row(rownum):
                     # xlrd is too dumb to just check for dates. So we have to ourselves
-                    if cell.ctype == 3: # 3 is date - http://www.lexicon.net/sjmachin/xlrd.html#xlrd.Cell-class
+                    # 3 is date
+                    # http://www.lexicon.net/sjmachin/xlrd.html#xlrd.Cell-class
+                    if cell.ctype == 3:
                         row_values += [datetime.datetime(*xlrd.xldate_as_tuple(cell.value, wb.datemode))]
                     else:
                         row_values += [cell.value]
@@ -162,7 +173,7 @@ class ImportLog(models.Model):
         elif file_ext == "lsx":
             from openpyxl.reader.excel import load_workbook
             # load_workbook actually accepts a file-like object for the filename param
-            wb = load_workbook(filename=self.import_file, use_iterators = True)
+            wb = load_workbook(filename=self.import_file, use_iterators=True)
             sheet = wb.get_active_sheet()
             for row in sheet.iter_rows():
                 data_row = []
@@ -216,8 +227,8 @@ class RelationalMatch(models.Model):
     are marked as unique in Django orm. The user could reference
     that student by either."""
     import_log = models.ForeignKey(ImportLog)
-    field_name = models.CharField(max_length=255) # Ex student_number_set
-    related_field_name = models.CharField(max_length=255, blank=True) # Ex username
+    field_name = models.CharField(max_length=255)  # Ex student_number_set
+    related_field_name = models.CharField(max_length=255, blank=True)  # Ex username
 
 
 class ImportedObject(models.Model):
@@ -225,4 +236,3 @@ class ImportedObject(models.Model):
     object_id = models.IntegerField()
     content_type = models.ForeignKey(ContentType)
     content_object = generic.GenericForeignKey('content_type', 'object_id')
-
