@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "django-simple-import",
-    version = "1.21",
+    version = "1.22",
     author = "David Burke",
     author_email = "david@burkesoftware.com",
     description = ("A Django import tool easy enough your users could use it"),
@@ -20,6 +20,8 @@ setup(
         'Environment :: Web Environment',
         'Framework :: Django',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.4',
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         "License :: OSI Approved :: BSD License",
