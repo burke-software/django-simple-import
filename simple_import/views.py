@@ -238,7 +238,10 @@ def match_relations(request, import_log_id):
                 field_names.append(field_name)
                 choices = ()
                 if hasattr(field, 'related'):
-                    parent_model = field.related.parent_model()
+                    try:
+                        parent_model = field.related.parent_model()
+                    except AttributeError:  # Django 1.8+
+                        parent_model = field.related.model
                 else:
                     parent_model = field.parent_model()
                 for field in get_direct_fields_from_model(parent_model):

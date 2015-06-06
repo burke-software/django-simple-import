@@ -22,7 +22,7 @@ class SimpleTest(TestCase):
             user=user,
             content_type=ContentType.objects.get_for_model(ImportLog)
         )
-        with open(self.absolute_path) as fp:
+        with open(self.absolute_path, 'rb') as fp:
             self.import_log = ImportLog.objects.create(
                 name='test',
                 user=user,
@@ -37,7 +37,7 @@ class SimpleTest(TestCase):
 
         self.assertEqual(ImportLog.objects.count(), 1)
 
-        with open(self.absolute_path) as fp:
+        with open(self.absolute_path, 'rb') as fp:
             response = self.client.post(reverse('simple_import-start_import'), {
                 'name': 'This is a test',
                 'import_file': fp,
