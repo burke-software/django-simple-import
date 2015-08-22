@@ -6,9 +6,8 @@ and user preferences in the database.
 
 Project is now stable and feature complete. Of course it's always a good idea to test before deploying.
 
-[Support development on gittip](http://www.gittip.com/bufke)
-
 [![Build Status](https://travis-ci.org/burke-software/django-simple-import.png?branch=master)](https://travis-ci.org/burke-software/django-simple-import)
+[![Coverage Status](https://coveralls.io/repos/burke-software/django-simple-import/badge.svg?branch=master&service=github)](https://coveralls.io/github/burke-software/django-simple-import?branch=master)
 
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
