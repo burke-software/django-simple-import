@@ -85,8 +85,8 @@ All import views do require admin "is staff" permission.
 
 ## Testing
 
-If you have [Fig](http://www.fig.sh/) and [Docker](https://www.docker.com/)
-installed, then just running `fig up` will do everything you need to test
+If you have [docker-compose](https://docs.docker.com/compose/) and [Docker](https://www.docker.com/)
+installed, then just running `docker-compose up` will do everything you need to test
 the packages.
 
 Otherwise look at the `.travis.yml` file for test dependencies.
