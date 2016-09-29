@@ -302,7 +302,7 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
             new_object.simple_import_m2ms[header_row_field_name] = cell
         elif isinstance(field, ForeignKey):
             related_field_name = RelationalMatch.objects.get(import_log=import_log, field_name=field.name).related_field_name
-            related_model = field.related.parent_model
+            related_model = field.remote_field.parent_model
             related_object = related_model.objects.get(**{related_field_name:cell})
             setattr(new_object, header_row_field_name, related_object)
         elif field.choices and getattr(settings, 'SIMPLE_IMPORT_LAZY_CHOICES', True):
