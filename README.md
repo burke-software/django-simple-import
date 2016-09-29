@@ -13,9 +13,16 @@ Project is now stable and feature complete. Of course it's always a good idea to
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
 ![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/do_import.png)
 
-# News
+# Changelog
 
-1.17 is released. The most apparent changes are 1.7 compatibility and migration to Django's
+## 2.0
+
+2.0 adds support for Django 1.9 and 1.10. Support for 1.8 and under is dropped. Support for Python 2 is dropped. 
+Use 1.x for older environments.
+
+## 1.17
+
+The most apparent changes are 1.7 compatibility and migration to Django's
 atomic transactions. Please report any issues. I test against mysql innodb, postgres, and sqlite.
 
 ## Features
@@ -32,11 +39,11 @@ atomic transactions. Please report any issues. I test against mysql innodb, post
 
 ## Install
 
-1. pip install django-simple-import
-1. Add 'simple_import' to INSTALLED APPS
-1. Add simple_import to urls.py like
-urlpatterns += url(r'^simple_import/', include('simple_import.urls')),
-1. syncdb (you may use south)
+1. `pip install django-simple-import`
+2. Add 'simple_import' to INSTALLED APPS
+3. Add simple_import to urls.py like
+`url(r'^simple_import/', include('simple_import.urls')),`
+4. migrate
 
 ## Optional Settings
 Define allowed methods to be "imported". Example:
@@ -62,13 +69,13 @@ If you need any help, we do consulting and custom development. Just email us at 
 
 ## Usage
 
-Go to /simple_import/start_import/ or use the admin interface.
+Go to `/simple_import/start_import/` or use the admin interface.
 
 The screenshots have a django-grappelli like theme. The base templates have no style and are very basic.
 See an example of customization [here](https://github.com/burke-software/django-sis/tree/master/templates/simple_import).
 It is often sufficient to simply override `simple_import/templates/base.html`.
 
-There is also a log of import records. Check out /admin/simple_import/.
+There is also a log of import records. Check out `/admin/simple_import/`.
 
 ## Odd Things
 
@@ -78,6 +85,7 @@ saving a hash.
 User has some required fields that...aren't really required. Hardcoded to let them pass.
 
 ### Security
+
 I'm working on the assumption staff users are trusted. Only users with change permission
 to a field will see it as an option. I have not spent much time looking for ways users could
 manipulate URLs to run unauthorized imports. Feel free to contribute changes.
@@ -86,7 +94,7 @@ All import views do require admin "is staff" permission.
 ## Testing
 
 If you have [docker-compose](https://docs.docker.com/compose/) and [Docker](https://www.docker.com/)
-installed, then just running `docker-compose up` will do everything you need to test
+installed, then just running `docker-compose run --rm app ./manage.py test` will do everything you need to test
 the packages.
 
 Otherwise look at the `.travis.yml` file for test dependencies.

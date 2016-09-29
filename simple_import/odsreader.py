@@ -54,7 +54,7 @@ class ODSReader:
 				for p in ps:
 					for n in p.childNodes:
 						if (n.nodeType == 3):
-							textContent = textContent + unicode(n.data)
+							textContent = textContent + str(n.data)
 					
 				if(textContent or textContent == ""):
 					if(textContent == "" or textContent[0] != "#"): # ignore comments cells

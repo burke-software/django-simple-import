@@ -11,20 +11,18 @@ from django.db import transaction, IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect
 from django.template import RequestContext
 import sys
 from django.db.models.fields import AutoField, BooleanField
 from django.utils.encoding import smart_text
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
-from simple_import.compat import User
-from simple_import.models import (ImportLog, ImportSetting, ColumnMatch,
+from .models import (ImportLog, ImportSetting, ColumnMatch,
                                   ImportedObject, RelationalMatch)
-from simple_import.forms import ImportForm, MatchForm, MatchRelationForm
-
-
-if sys.version_info >= (3, 0):
-    unicode = str
+from .forms import ImportForm, MatchForm, MatchRelationForm
+from .utils import get_all_field_names
 
 
 def is_foreign_key_id_name(field_name, field_object):
@@ -43,9 +41,11 @@ def validate_match_columns(import_log, model_class, header_row):
     """
     errors = []
     column_matches = import_log.import_setting.columnmatch_set.all()
-    field_names = model_class._meta.get_all_field_names()
+    field_names = get_all_field_names(model_class)
     for field_name in field_names:
-        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        field_object = model_class._meta.get_field(field_name)
+        model = field_object.model
+        direct = field_object.concrete
         # Skip if update only and skip ptr which suggests it's a django
         # inherited field. Also some hard coded ones for Django Auth
         if (import_log.import_type != "O" and
@@ -107,9 +107,9 @@ def match_columns(request, import_log_id):
     errors = []
 
     model_class = import_log.import_setting.content_type.model_class()
-    field_names = model_class._meta.get_all_field_names()
+    field_names = get_all_field_names(model_class)
     for field_name in field_names:
-        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        field_object = model_class._meta.get_field(field_name)
         # We can't add a new AutoField and specify it's value
         if import_log.import_type == "N" and isinstance(field_object, AutoField):
             field_names.remove(field_name)
@@ -124,7 +124,8 @@ def match_columns(request, import_log_id):
                 if update_key:
                     field_name = import_log.import_setting.columnmatch_set.get(column_name=update_key).field_name
                     if field_name:
-                        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+                        field_object = model_class._meta.get_field(field_name)
+                        direct = field_object.concrete
 
                         if direct and field_object.unique:
                             import_log.update_key = update_key
@@ -155,7 +156,9 @@ def match_columns(request, import_log_id):
 
     field_choices = (('', 'Do Not Use'),)
     for field_name in field_names:
-        field_object, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+        field_object = model_class._meta.get_field(field_name)
+        direct = field_object.concrete
+        m2m = field_object.many_to_many
         add = True
 
         if direct:
@@ -198,20 +201,22 @@ def match_columns(request, import_log_id):
         form.fields['field_name'].widget = forms.Select(choices=(field_choices))
         form.sample = sample_row[i]
 
-    return render_to_response(
+    return render(
+        request,
         'simple_import/match_columns.html',
         {'import_log': import_log, 'formset': formset, 'errors': errors},
-        RequestContext(request, {}),)
+    )
 
 
 def get_direct_fields_from_model(model_class):
     direct_fields = []
-    all_fields_names = model_class._meta.get_all_field_names()
-    for field_name in all_fields_names:
-        field = model_class._meta.get_field_by_name(field_name)
-        # Direct, not m2m, not FK
-        if field[2] and not field[3] and field[0].__class__.__name__ != "ForeignKey":
-            direct_fields += [field[0]]
+    all_field_names = get_all_field_names(model_class)
+    for field_name in all_field_names:
+        field = model_class._meta.get_field(field_name)
+        direct = field.concrete
+        m2m = field.many_to_many
+        if direct and not m2m and field.__class__.__name__ != "ForeignKey":
+            direct_fields += [field]
     return direct_fields
 
 
@@ -228,7 +233,8 @@ def match_relations(request, import_log_id):
 
         if not field_name.startswith('simple_import_custom__') and \
                 not field_name.startswith('simple_import_method__'):
-            field, model, direct, m2m = model_class._meta.get_field_by_name(field_name)
+            field = model_class._meta.get_field(field_name)
+            m2m = field.many_to_many
 
             if m2m or isinstance(field, ForeignKey):
                 RelationalMatch.objects.get_or_create(
@@ -243,10 +249,10 @@ def match_relations(request, import_log_id):
                     except AttributeError:  # Django 1.8+
                         parent_model = field.related.model
                 else:
-                    parent_model = field.parent_model()
+                    parent_model = field.related_model
                 for field in get_direct_fields_from_model(parent_model):
                     if field.unique:
-                        choices += ((field.name, unicode(field.verbose_name)),)
+                        choices += ((field.name, str(field.verbose_name)),)
                 choice_set += [choices]
 
     existing_matches = import_log.relationalmatch_set.filter(field_name__in=field_names)
@@ -276,11 +282,12 @@ def match_relations(request, import_log_id):
         choices = choice_set[i]
         form.fields['related_field_name'].widget = forms.Select(choices=choices)
 
-    return render_to_response(
+    return render(
+        request,
         'simple_import/match_relations.html',
         {'formset': formset,
          'existing_matches': existing_matches},
-        RequestContext(request, {}),)
+    )
 
 def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Set a field from a import cell. Use referenced fields the field
@@ -288,7 +295,9 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """
     if (not header_row_field_name.startswith('simple_import_custom__') and
             not header_row_field_name.startswith('simple_import_method__')):
-        field, model, direct, m2m =  new_object._meta.get_field_by_name(header_row_field_name)
+        field = new_object._meta.get_field(header_row_field_name)
+        direct = field.concrete
+        m2m = field.many_to_many
         if m2m:
             new_object.simple_import_m2ms[header_row_field_name] = cell
         elif isinstance(field, ForeignKey):
@@ -452,7 +461,7 @@ def do_import(request, import_log_id):
                 fail_count += 1
             except ValueError:
                 exc = sys.exc_info()
-                if unicode(exc[1]).startswith('invalid literal for int() with base 10'):
+                if str(exc[1]).startswith('invalid literal for int() with base 10'):
                     error_data += [row + ["Incompatible Data - A number was expected, but a character was used", smart_text(exc[1])]]
                 else:
                     error_data += [row + ["Value Error", smart_text(exc[1])]]
@@ -482,7 +491,8 @@ def do_import(request, import_log_id):
         import_log.error_file.save(filename, ContentFile(save_virtual_workbook(wb)))
         import_log.save()
 
-    return render_to_response(
+    return render(
+        request,
         'simple_import/do_import.html',
         {
             'error_data': error_data,
@@ -492,7 +502,7 @@ def do_import(request, import_log_id):
             'import_log': import_log,
             'commit': commit,
             'success_undo': success_undo,},
-        RequestContext(request, {}),)
+    )
 
 
 @staff_member_required
@@ -517,5 +527,5 @@ def start_import(request):
             Q(permission__group__user=request.user, permission__codename__startswith="change_") |
             Q(permission__user=request.user, permission__codename__startswith="change_")).distinct()
 
-    return render_to_response('simple_import/import.html', {'form':form,}, RequestContext(request, {}),)
+    return render(request, 'simple_import/import.html', {'form':form,})
 

@@ -1,16 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models, transaction
 from django.utils.encoding import smart_text
-from django.utils.encoding import python_2_unicode_compatible
+from .utils import get_all_field_names
 import datetime
-
-AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
-
-import sys
-if sys.version_info >= (3, 0):
-    unicode = str
+AUTH_USER_MODEL = settings.AUTH_USER_MODEL
 
 
 class ImportSetting(models.Model):
@@ -22,7 +17,6 @@ class ImportSetting(models.Model):
         unique_together = ('user', 'content_type',)
 
 
-@python_2_unicode_compatible
 class ColumnMatch(models.Model):
     """ Match column names from the user uploaded file to the database """
     column_name = models.CharField(max_length=200)
@@ -39,7 +33,7 @@ class ColumnMatch(models.Model):
         unique_together = ('column_name', 'import_setting')
 
     def __str__(self):
-        return unicode('{0} {1}'.format(self.column_name, self.field_name))
+        return str('{0} {1}'.format(self.column_name, self.field_name))
 
     def guess_field(self):
         """ Guess the match based on field names
@@ -48,7 +42,7 @@ class ColumnMatch(models.Model):
         then normalize the field name and check for match
         """
         model = self.import_setting.content_type.model_class()
-        field_names = model._meta.get_all_field_names()
+        field_names = get_all_field_names(model)
         if self.column_name in field_names:
             self.field_name = self.column_name
             return
@@ -59,13 +53,12 @@ class ColumnMatch(models.Model):
             return
         # Try verbose name
         for field_name in field_names:
-            field = model._meta.get_field_by_name(field_name)[0]
+            field = model._meta.get_field(field_name)
             if hasattr(field, 'verbose_name'):
                 if (field.verbose_name.lower().replace(' ', '_') == normalized_field_name):
                     self.field_name = field_name
 
 
-@python_2_unicode_compatible
 class ImportLog(models.Model):
     """ A log of all import attempts """
     name = models.CharField(max_length=255)
@@ -84,7 +77,7 @@ class ImportLog(models.Model):
     update_key = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
-        return unicode(self.name)
+        return str(self.name)
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -185,7 +178,7 @@ class ImportLog(models.Model):
         elif file_ext == "ods":
             from .odsreader import ODSReader
             doc = ODSReader(self.import_file)
-            table = doc.SHEETS.items()[0]
+            table = list(doc.SHEETS.items())[0]
 
             # Remove blank columns that ods files seems to have
             blank_columns = []
@@ -235,4 +228,4 @@ class ImportedObject(models.Model):
     import_log = models.ForeignKey(ImportLog)
     object_id = models.IntegerField()
     content_type = models.ForeignKey(ContentType)
-    content_object = generic.GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey('content_type', 'object_id')
