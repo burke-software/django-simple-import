@@ -18,6 +18,7 @@ Project is now stable and feature complete. Of course it's always a good idea to
 ## 2.0
 
 2.0 adds support for Django 1.9 and 1.10. Support for 1.8 and under is dropped. Support for Python 2 is dropped. 
+Removed support for django-custom-field
 Use 1.x for older environments.
 
 ## 1.17
@@ -31,7 +32,6 @@ atomic transactions. Please report any issues. I test against mysql innodb, post
 - Guess matches
 - Create, update, or both
 - Allow programmers to define special import methods for custom handling
-- Support for [django-custom-field](https://github.com/burke-software/django-custom-field)
 - Set related objects by any unique field
 - Simulate imports before commiting to database
 - Undo (create only) imports
