@@ -6,7 +6,7 @@ env:
   - DJANGO_VERSION=1.10.1
 install:
   - pip install -q Django==$DJANGO_VERSION
-  - pip install -q -e .
+  - pip install -q -e .[ods,xlsx,xls]
   - pip install coveralls
 # command to run tests
 script:

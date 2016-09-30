@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "django-simple-import",
-    version = "2.0",
+    version = "2.0.1",
     author = "David Burke",
     author_email = "david@burkesoftware.com",
     description = ("A Django import tool easy enough your users could use it"),
@@ -21,5 +21,10 @@ setup(
         'Intended Audience :: System Administrators',
         "License :: OSI Approved :: BSD License",
     ],
-    install_requires=['django', 'openpyxl', 'odfpy', 'xlrd']
+    install_requires=['django'],
+    extras_require = {
+        'xlsx': ["openpyxl"],
+        'ods': ["odfpy"],
+        'xls': ["xlrd"],
+    },
 )

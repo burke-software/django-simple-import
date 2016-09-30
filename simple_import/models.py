@@ -1,10 +1,13 @@
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils.encoding import smart_text
 from .utils import get_all_field_names
+import csv
 import datetime
+from io import StringIO
 AUTH_USER_MODEL = settings.AUTH_USER_MODEL
 
 
@@ -80,7 +83,6 @@ class ImportLog(models.Model):
         return str(self.name)
 
     def clean(self):
-        from django.core.exceptions import ValidationError
         filename = str(self.import_file).lower()
         if not filename[-3:] in ('xls', 'ods', 'csv', 'lsx'):
             raise ValidationError(
@@ -157,8 +159,7 @@ class ImportLog(models.Model):
                 if only_header:
                     break
         elif file_ext == "csv":
-            import csv
-            reader = csv.reader(self.import_file)
+            reader = csv.reader(StringIO(self.import_file.read().decode()))
             for row in reader:
                 data += [row]
                 if only_header:

@@ -16,6 +16,7 @@ class SimpleTest(TestCase):
         user.is_staff = True
         user.is_superuser = True
         user.save()
+        self.user = user
         self.client.login(username='temporary', password='temporary')
         self.absolute_path = os.path.join(
             os.path.dirname(__file__), 'static', 'test_import.xls')
@@ -31,6 +32,20 @@ class SimpleTest(TestCase):
                 import_setting=self.import_setting,
                 import_type='N',
             )
+    
+    def test_csv(self):
+        path = os.path.join(
+            os.path.dirname(__file__), 'static', 'test_import.csv')
+        with open(path, 'rb') as fp:
+            import_log = ImportLog.objects.create(
+                name="test",
+                user=self.user,
+                import_file=File(fp),
+                import_setting=self.import_setting,
+                import_type='N',
+            )
+        file_data = import_log.get_import_file_as_list(only_header=True)
+        self.assertIn('name', file_data)
 
     def test_import(self):
         """ Make sure we can upload the file and match columns """

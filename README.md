@@ -39,7 +39,7 @@ atomic transactions. Please report any issues. I test against mysql innodb, post
 
 ## Install
 
-1. `pip install django-simple-import`
+1. `pip install django-simple-import[ods,xls,xlsx]` for full install or specify which formats you need to support. CSV is supported out of box.
 2. Add 'simple_import' to INSTALLED APPS
 3. Add simple_import to urls.py like
 `url(r'^simple_import/', include('simple_import.urls')),`
