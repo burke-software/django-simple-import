@@ -47,6 +47,20 @@ class SimpleTest(TestCase):
         file_data = import_log.get_import_file_as_list(only_header=True)
         self.assertIn('name', file_data)
 
+    def test_ods(self):
+        path = os.path.join(
+            os.path.dirname(__file__), 'static', 'test_import.ods')
+        with open(path, 'rb') as fp:
+            import_log = ImportLog.objects.create(
+                name="test",
+                user=self.user,
+                import_file=File(fp),
+                import_setting=self.import_setting,
+                import_type='N',
+            )
+        file_data = import_log.get_import_file_as_list(only_header=True)
+        self.assertIn('name', file_data)
+
     def test_import(self):
         """ Make sure we can upload the file and match columns """
         import_log_ct_id = ContentType.objects.get_for_model(ImportLog).id
