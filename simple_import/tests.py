@@ -79,9 +79,9 @@ class SimpleTest(TestCase):
         self.assertRedirects(response, reverse('simple_import-match_columns', kwargs={'import_log_id': ImportLog.objects.all()[1].id}))
         self.assertContains(response, '<h1>Match Columns</h1>')
         # Check matching
-        self.assertContains(response, '<option value="name" selected="selected">')
-        self.assertContains(response, '<option value="user" selected="selected">')
-        self.assertContains(response, '<option value="import_file" selected="selected">')
+        self.assertContains(response, '<option value="name" selected')
+        self.assertContains(response, '<option value="user" selected')
+        self.assertContains(response, '<option value="import_file" selected')
         self.assertContains(response, '<option value="import_setting">import setting (Required) (Related)</option>')
         # Check Sample Data
         self.assertContains(response, '/tmp/foo.xls')
