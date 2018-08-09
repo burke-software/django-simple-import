@@ -6,3 +6,6 @@ django_simple_import.egg-info/
 *.egg/
 pep8.txt
 import_file/
+.idea
+error_file
+simple_import/static
