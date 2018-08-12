@@ -5,7 +5,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.urls import reverse
+try:
+    from django.urls import reverse
+except ImportError:
+    from django.core.urlresolvers import reverse
 from django.db.models import Q, ForeignKey
 from django.db import transaction, IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
