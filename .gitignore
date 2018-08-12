@@ -9,3 +9,5 @@ import_file/
 .idea
 error_file
 simple_import/static
+build
+dist

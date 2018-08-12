@@ -267,6 +267,7 @@ def match_relations(request, import_log_id):
          'existing_matches': existing_matches},
     )
 
+
 def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Set a field from a import cell. Use referenced fields the field
     is m2m or a foreign key.
@@ -281,7 +282,10 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
                 import_log=import_log,
                 field_name=field.name,
             ).related_field_name
-            related_model = field.remote_field.parent_model
+            try:
+                related_model = field.remote_field.parent_model()
+            except AttributeError:
+                related_model = field.remote_field.model
             related_object = related_model.objects.get(**{related_field_name:cell})
             setattr(new_object, header_row_field_name, related_object)
         elif field.choices and getattr(settings, 'SIMPLE_IMPORT_LAZY_CHOICES', True):
@@ -439,12 +443,11 @@ def do_import(request, import_log_id):
                 else:
                     error_data += [row + ["Value Error", smart_text(exc[1])]]
                 fail_count += 1
-            except:
+            except Exception as e:
                 error_data += [row + ["Unknown Error"]]
                 fail_count += 1
         if not commit:
             transaction.savepoint_rollback(sid)
-
 
     if fail_count:
         from io import StringIO
