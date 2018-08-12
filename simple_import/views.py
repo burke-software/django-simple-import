@@ -443,7 +443,7 @@ def do_import(request, import_log_id):
                 else:
                     error_data += [row + ["Value Error", smart_text(exc[1])]]
                 fail_count += 1
-            except Exception as e:
+            except:
                 error_data += [row + ["Unknown Error"]]
                 fail_count += 1
         if not commit:
