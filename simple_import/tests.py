@@ -1,10 +1,7 @@
 import os
 
 from django.contrib.contenttypes.models import ContentType
-try:
-    from django.urls import reverse
-except ImportError:
-    from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 from .models import *
 from django.core.files import File
