@@ -13,8 +13,8 @@ AUTH_USER_MODEL = settings.AUTH_USER_MODEL
 
 class ImportSetting(models.Model):
     """ Save some settings per user per content type """
-    user = models.ForeignKey(AUTH_USER_MODEL)
-    content_type = models.ForeignKey(ContentType)
+    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
 
     class Meta():
         unique_together = ('user', 'content_type',)
@@ -24,7 +24,7 @@ class ColumnMatch(models.Model):
     """ Match column names from the user uploaded file to the database """
     column_name = models.CharField(max_length=200)
     field_name = models.CharField(max_length=255, blank=True)
-    import_setting = models.ForeignKey(ImportSetting)
+    import_setting = models.ForeignKey(ImportSetting, on_delete=models.CASCADE)
     default_value = models.CharField(max_length=2000, blank=True)
     null_on_empty = models.BooleanField(
         default=False,
@@ -66,11 +66,11 @@ class ImportLog(models.Model):
     """ A log of all import attempts """
     name = models.CharField(max_length=255)
     user = models.ForeignKey(
-        AUTH_USER_MODEL, editable=False, related_name="simple_import_log")
+        AUTH_USER_MODEL, editable=False, related_name="simple_import_log", on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True, verbose_name="Date Created")
     import_file = models.FileField(upload_to="import_file")
     error_file = models.FileField(upload_to="error_file", blank=True)
-    import_setting = models.ForeignKey(ImportSetting, editable=False)
+    import_setting = models.ForeignKey(ImportSetting, editable=False, on_delete=models.CASCADE)
     import_type_choices = (
         ("N", "Create New Records"),
         ("U", "Create and Update Records"),
@@ -167,7 +167,7 @@ class ImportLog(models.Model):
         elif file_ext == "lsx":
             from openpyxl.reader.excel import load_workbook
             # load_workbook actually accepts a file-like object for the filename param
-            wb = load_workbook(filename=self.import_file, use_iterators=True)
+            wb = load_workbook(filename=self.import_file, read_only=True)
             sheet = wb.get_active_sheet()
             for row in sheet.iter_rows():
                 data_row = []
@@ -220,13 +220,13 @@ class RelationalMatch(models.Model):
     EX Lets say a student has an ID and username and both
     are marked as unique in Django orm. The user could reference
     that student by either."""
-    import_log = models.ForeignKey(ImportLog)
+    import_log = models.ForeignKey(ImportLog, on_delete=models.CASCADE)
     field_name = models.CharField(max_length=255)  # Ex student_number_set
     related_field_name = models.CharField(max_length=255, blank=True)  # Ex username
 
 
 class ImportedObject(models.Model):
-    import_log = models.ForeignKey(ImportLog)
+    import_log = models.ForeignKey(ImportLog, on_delete=models.CASCADE)
     object_id = models.IntegerField()
-    content_type = models.ForeignKey(ContentType)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     content_object = GenericForeignKey('content_type', 'object_id')

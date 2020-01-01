@@ -5,7 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db.models import Q, ForeignKey
 from django.db import transaction, IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
@@ -267,6 +267,7 @@ def match_relations(request, import_log_id):
          'existing_matches': existing_matches},
     )
 
+
 def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
     """ Set a field from a import cell. Use referenced fields the field
     is m2m or a foreign key.
@@ -281,7 +282,10 @@ def set_field_from_cell(import_log, new_object, header_row_field_name, cell):
                 import_log=import_log,
                 field_name=field.name,
             ).related_field_name
-            related_model = field.remote_field.parent_model
+            try:
+                related_model = field.remote_field.parent_model()
+            except AttributeError:
+                related_model = field.remote_field.model
             related_object = related_model.objects.get(**{related_field_name:cell})
             setattr(new_object, header_row_field_name, related_object)
         elif field.choices and getattr(settings, 'SIMPLE_IMPORT_LAZY_CHOICES', True):
@@ -444,7 +448,6 @@ def do_import(request, import_log_id):
                 fail_count += 1
         if not commit:
             transaction.savepoint_rollback(sid)
-
 
     if fail_count:
         from io import StringIO
