@@ -1,19 +1,20 @@
 django-simple-import
 ====================
 
-An import tool easy enough your users could use it. django-simple-import aims to keep track of logs
-and user preferences in the database.
+An easy to use import tool for Django. django-simple-import aims to keep track of logs and user preferences in the database.
 
-Project is now stable and feature complete. Of course it's always a good idea to test before deploying.
+Project is now stable and in maintenance only mode. If you'd like to add features please fork or take over ownership.
 
-[![Build Status](https://travis-ci.org/burke-software/django-simple-import.png?branch=master)](https://travis-ci.org/burke-software/django-simple-import)
-[![Coverage Status](https://coveralls.io/repos/burke-software/django-simple-import/badge.svg?branch=master&service=github)](https://coveralls.io/github/burke-software/django-simple-import?branch=master)
-
-![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/start_import.png)
-![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/match_columns.png)
-![Alt text](https://raw.github.com/burke-software/django-simple-import/master/docs/do_import.png)
+![](/docs/start_import.png)
+![](/docs/match_columns.png)
+![](/docs/do_import.png)
 
 # Changelog
+
+## 2.1
+
+- Add support for Django 2.2 and 3.0
+- Move to gitlab and gitlab CI for freedom and consistency with other Burke Software maintained projects
 
 ## 2.0
 

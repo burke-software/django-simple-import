@@ -1,0 +1,6 @@
+image: python:3.7-slim
+
+test:
+  script:
+    - pip install tox
+    - tox
