@@ -9,7 +9,7 @@ setup(
     license = "BSD",
     keywords = "django import",
     url = "https://gitlab.com/burke-software/django-simple-import",
-    packages=find_packages(),
+    packages=find_packages(exclude=("simple_import/static","simple_import_demo")),
     include_package_data=True,
     classifiers=[
         "Development Status :: 5 - Production/Stable",

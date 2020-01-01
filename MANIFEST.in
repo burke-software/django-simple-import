@@ -1,2 +1,3 @@
 recursive-include simple_import/templates *
-recursive-include simple_import/static *
+recursive-exclude simple_import/static *
+recursive-exclude simple_import_demo *
